@@ -95,10 +95,49 @@ voice-menu:
   accent: "&c"
 
 rtp:
-  world: world
+  worlds:
+    survival: world
+    nether: world_nether
+    end: world_the_end
   min-radius: 500
   max-radius: 5000
   cooldown-seconds: 60
+
+# Shop-Preise gelten pro Kaufmenge; sell-prices gelten pro verkauftem Item.
+shop:
+  items:
+    DIAMOND:
+      price: 250
+      amount: 1
+    IRON_INGOT:
+      price: 12
+      amount: 1
+    GOLD_INGOT:
+      price: 20
+      amount: 1
+    EMERALD:
+      price: 100
+      amount: 1
+    ENDER_PEARL:
+      price: 35
+      amount: 1
+    GOLDEN_APPLE:
+      price: 150
+      amount: 1
+
+sell-prices:
+  DIAMOND: 50
+  IRON_INGOT: 3
+  GOLD_INGOT: 5
+  EMERALD: 20
+  COAL: 1
+  RAW_IRON: 2
+  RAW_GOLD: 3
+  COPPER_INGOT: 0.5
+  WHEAT: 0.25
+  CARROT: 0.25
+  POTATO: 0.25
+  SUGAR_CANE: 0.2
 
 # LuckTAB kann parallel den TAB verwalten; aktiviere die Sidebar nur wenn LuckTAB
 # keine eigene Sidebar anzeigt.
