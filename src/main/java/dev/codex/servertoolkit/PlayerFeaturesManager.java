@@ -189,9 +189,7 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
         if (plugin.isLobbyMode()) { player.sendMessage(color("&cRTP ist auf der Lobby deaktiviert.")); return; }
         if (!player.hasPermission("servertoolkit.rtp")) { player.sendMessage(color("&cDafür hast du keine Rechte.")); return; }
         Inventory inv = Bukkit.createInventory(new RtpHolder(), 27, title("&8Zufalls-Teleport"));
-        addRtpWorld(inv, 11, "survival", Material.GRASS_BLOCK, "&aSurvival", "Zufälliger sicherer Ort in der Survival-Welt");
-        addRtpWorld(inv, 13, "nether", Material.NETHERRACK, "&cNether", "Zufälliger sicherer Ort im Nether");
-        addRtpWorld(inv, 15, "end", Material.END_STONE, "&5End", "Zufälliger sicherer Ort im End");
+        addRtpWorld(inv, 13, "survival", Material.GRASS_BLOCK, "&aOverworld", "Zufälliger sicherer Ort in der Overworld");
         inv.setItem(22, menuItem(Material.BARRIER, "&cSchließen", "close"));
         player.openInventory(inv);
     }
@@ -222,7 +220,7 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
             player.sendMessage(color("&cWarte noch " + ((readyAt - now + 999) / 1000) + " Sekunden bis zum nächsten RTP."));
             return;
         }
-        String worldName = plugin.getConfig().getString("rtp.worlds." + dimension, "world");
+        String worldName = plugin.getConfig().getString("rtp.worlds.survival", "world");
         World world = Bukkit.getWorld(worldName);
         if (world == null) { player.sendMessage(color("&cDie Welt &f" + worldName + " &cist nicht geladen.")); return; }
         int min = Math.max(0, plugin.getConfig().getInt("rtp.min-radius", 500));
@@ -233,12 +231,12 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
             int radius = ThreadLocalRandom.current().nextInt(min, max + 1);
             int x = center.getBlockX() + (int) Math.round(Math.cos(angle) * radius);
             int z = center.getBlockZ() + (int) Math.round(Math.sin(angle) * radius);
-            Location candidate = dimension.equals("nether") ? safeNetherLocation(world, x, z) : safeSurfaceLocation(world, x, z);
+            Location candidate = safeSurfaceLocation(world, x, z);
             if (candidate == null) continue;
             player.closeInventory();
             player.teleport(candidate);
             rtpCooldowns.put(player.getUniqueId(), now + plugin.getConfig().getLong("rtp.cooldown-seconds", 60) * 1000L);
-            player.sendMessage(color("&aDu wurdest sicher in &f" + dimension.toUpperCase(Locale.ROOT) + " &ateleportiert."));
+            player.sendMessage(color("&aDu wurdest sicher in der &fOverworld &ateleportiert."));
             return;
         }
         player.sendMessage(color("&cKein sicherer Ort gefunden. Bitte versuche es erneut."));
