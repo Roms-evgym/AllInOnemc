@@ -35,6 +35,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     private SitManager sitManager;
     private LobbyManager lobbyManager;
     private EconomyManager economyManager;
+    private PlayerFeaturesManager playerFeaturesManager;
     private final Map<java.util.UUID, Long> rtpCooldowns = new HashMap<>();
 
     @Override
@@ -49,6 +50,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         clanManager = new ClanManager(this);
         maceManager = new MaceManager(this, clanManager);
         economyManager = new EconomyManager(this);
+        playerFeaturesManager = new PlayerFeaturesManager(this);
         utilityManager = new UtilityManager(this);
         marketManager = new MarketManager(this);
         kitManager = new KitManager(this);
@@ -58,7 +60,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         WorldSpawnManager worldSpawnManager = new WorldSpawnManager();
         for (String name : new String[]{"spawn", "setspawn", "sethome", "home", "homes", "delhome", "rtp", "clan", "mace",
                 "fly", "god", "invsee", "echest", "ecsee", "trash", "ranks", "rank", "voice", "ah", "order", "orders", "kit",
-                "ban", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "servers", "fakebase", "fakore", "money", "eco", "pay"}) {
+                "ban", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "servers", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny"}) {
             getCommand(name).setExecutor(this);
         }
         getCommand("sit").setExecutor(sitManager);
@@ -82,6 +84,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             case "pay" -> { economyManager.handle(sender, prepend("pay", args)); return true; }
             case "eco" -> { economyManager.handle(sender, args); return true; }
             case "hub", "lobby" -> { connectToLobby(sender); return true; }
+            case "sell", "shop", "rtp", "tpa", "tpaccept", "tpdeny" -> { playerFeaturesManager.onCommand(sender, command, label, args); return true; }
         }
         if (!(sender instanceof Player player)) {
             sender.sendMessage("Dieser Befehl ist nur im Spiel verfügbar.");
@@ -127,7 +130,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             }
             case "homes" -> listHomes(player);
             case "delhome" -> deleteHome(player, args);
-            case "rtp" -> randomTeleport(player);
+            case "rtp" -> playerFeaturesManager.onCommand(sender, command, label, args);
             case "clan" -> clanManager.handle(player, args);
             case "mace" -> maceManager.onCommand(sender, command, label, args);
             case "fly", "god", "invsee", "echest", "ecsee", "trash", "ranks", "rank", "voice" ->
