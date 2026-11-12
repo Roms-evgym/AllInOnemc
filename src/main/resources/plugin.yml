@@ -80,6 +80,10 @@ commands:
     description: Bannt einen Spieler mit einem Ban-Preset.
     usage: /ban <Spieler> <Preset>
     permission: servertoolkit.ban
+  banrank:
+    description: Öffnet die Rang-zu-Rang-Ban-Rechte-GUI.
+    usage: /banrank
+    permission: servertoolkit.ban.manage
   banpreset:
     description: Verwaltet Ban-Presets per GUI oder Befehl.
     usage: /banpreset [gui|list|set|delete]
