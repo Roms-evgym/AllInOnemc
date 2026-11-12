@@ -25,8 +25,23 @@ commands:
     description: Löscht ein Home
     usage: /delhome <Name>
   rtp:
-    description: Teleportiert dich zu einem sicheren Zufallsort
+    description: Öffnet das Zufalls-Teleport-Menü für Survival, Nether und End.
     usage: /rtp
+  shop:
+    description: Öffnet den Server-Shop.
+    usage: /shop
+  sell:
+    description: Verkauft Gegenstände aus deiner Hand oder deinem Inventar.
+    usage: /sell [hand|all]
+  tpa:
+    description: Sendet einem Spieler eine Teleportanfrage.
+    usage: /tpa <Spieler>
+  tpaccept:
+    description: Nimmt eine offene Teleportanfrage an.
+    usage: /tpaccept
+  tpdeny:
+    description: Lehnt eine offene Teleportanfrage ab.
+    usage: /tpdeny
   clan:
     description: Clan-System
     usage: /clan
