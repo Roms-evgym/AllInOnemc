@@ -448,6 +448,7 @@ public final class UtilityManager implements CommandExecutor, Listener {
 
     private String getRankId(OfflinePlayer player) { return rankData.getString("players." + player.getUniqueId(), "member"); }
     public String rankId(Player player) { return getRankId(player); }
+    public String rankId(OfflinePlayer player) { return getRankId(player); }
     public int maxHomes(Player player) { return Math.max(1, plugin.getConfig().getInt("ranks." + getRankId(player) + ".max-homes", 1)); }
     private String rankPrefix(String id) { return color(plugin.getConfig().getString("ranks." + id + ".prefix", "&7")); }
     private void saveRanks() { try { rankData.save(rankFile); } catch (IOException e) { plugin.getLogger().severe("Konnte ranks.yml nicht speichern: " + e.getMessage()); } }
