@@ -58,7 +58,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         WorldSpawnManager worldSpawnManager = new WorldSpawnManager();
         for (String name : new String[]{"spawn", "setspawn", "sethome", "home", "homes", "delhome", "rtp", "clan", "mace",
                 "fly", "god", "invsee", "echest", "ecsee", "trash", "ranks", "rank", "voice", "ah", "order", "orders", "kit",
-                "ban", "banpreset", "banhammer", "vanish", "hub", "lobby", "servers", "fakebase", "fakore", "money", "eco", "pay"}) {
+                "ban", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "servers", "fakebase", "fakore", "money", "eco", "pay"}) {
             getCommand(name).setExecutor(this);
         }
         getCommand("sit").setExecutor(sitManager);
@@ -77,6 +77,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         switch (command.getName().toLowerCase(java.util.Locale.ROOT)) {
             case "ban" -> { moderationManager.handleBan(sender, args); return true; }
             case "banpreset" -> { moderationManager.handlePreset(sender, args); return true; }
+            case "banrank" -> { moderationManager.handleBanRanks(sender); return true; }
             case "money" -> { economyManager.handle(sender, args); return true; }
             case "pay" -> { economyManager.handle(sender, prepend("pay", args)); return true; }
             case "eco" -> { economyManager.handle(sender, args); return true; }
