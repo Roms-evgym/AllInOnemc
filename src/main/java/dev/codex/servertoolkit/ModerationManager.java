@@ -42,6 +42,7 @@ public final class ModerationManager implements Listener {
     private final NamespacedKey hammerPreset;
     private final NamespacedKey vanishAction;
     private final NamespacedKey presetAction;
+    private final NamespacedKey banRankAction;
     private final Map<UUID, PendingPresetInput> pendingPresetInputs = new HashMap<>();
 
     public ModerationManager(ServerToolkit plugin) {
@@ -51,6 +52,7 @@ public final class ModerationManager implements Listener {
         this.hammerPreset = new NamespacedKey(plugin, "banhammer_preset");
         this.vanishAction = new NamespacedKey(plugin, "vanish_gui_action");
         this.presetAction = new NamespacedKey(plugin, "banpreset_gui_action");
+        this.banRankAction = new NamespacedKey(plugin, "banrank_gui_action");
         if (!data.contains("presets")) {
             data.set("presets.spam.duration", "1d");
             data.set("presets.spam.reason", "Spam");
@@ -73,7 +75,116 @@ public final class ModerationManager implements Listener {
         if (args.length < 2) { sender.sendMessage(color("&cNutzung: /ban <Spieler> <Preset>")); return; }
         String id = normalize(args[1]);
         if (id == null || !data.isConfigurationSection("presets." + id)) { sender.sendMessage(color("&cDieses Ban-Preset gibt es nicht.")); return; }
+        if (sender instanceof Player player) {
+            OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
+            if (!canBanRank(player, target)) {
+                sender.sendMessage(color("&cDein Rang darf den Rang &f" +
+                        plugin.getConfig().getString("ranks." + plugin.utilityManager().rankId(target) + ".display", plugin.utilityManager().rankId(target)) +
+                        " &cnicht bannen."));
+                return;
+            }
+        }
         ban(sender, args[0], id);
+    }
+
+    public void handleBanRanks(CommandSender sender) {
+        if (!sender.hasPermission("servertoolkit.ban.manage")) { deny(sender); return; }
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("Die Rang-GUI ist nur im Spiel verfügbar.");
+            return;
+        }
+        openBanRankActors(player);
+    }
+
+    private void openBanRankActors(Player player) {
+        List<String> ids = ranks();
+        Inventory inv = Bukkit.createInventory(new BanRankHolder(), 54, GuiStyle.title("Ban-Rechte: Ausführender Rang"));
+        int[] slots = vanishSlots();
+        for (int i = 0; i < Math.min(slots.length, ids.size()); i++) {
+            String id = ids.get(i);
+            inv.setItem(slots[i], banRankItem(Material.PLAYER_HEAD, "&e" + rankDisplay(id),
+                    "&7Auswählen, welche Ränge &f" + rankDisplay(id) + " &7bannen darf.", "actor:" + id));
+        }
+        inv.setItem(49, banRankItem(Material.BARRIER, "&cSchließen", "", "close"));
+        GuiStyle.frame(inv);
+        player.openInventory(inv);
+    }
+
+    private void openBanRankTargets(Player player, String actor) {
+        if (!plugin.getConfig().isConfigurationSection("ranks." + actor)) { openBanRankActors(player); return; }
+        List<String> ids = ranks();
+        Inventory inv = Bukkit.createInventory(new BanRankHolder(), 54, GuiStyle.title("Ban-Rechte: " + rankDisplay(actor)));
+        int[] slots = vanishSlots();
+        for (int i = 0; i < Math.min(slots.length, ids.size()); i++) {
+            String target = ids.get(i);
+            boolean allowed = data.getBoolean("ban-ranks." + actor + "." + target, defaultCanBan(actor, target));
+            inv.setItem(slots[i], banRankItem(allowed ? Material.LIME_DYE : Material.GRAY_DYE,
+                    (allowed ? "&aDarf bannen: " : "&cDarf NICHT bannen: ") + rankDisplay(target),
+                    "&7Klicken zum Umschalten", "toggle:" + actor + ":" + target));
+        }
+        inv.setItem(45, banRankItem(Material.ARROW, "&7« Ränge", "", "back"));
+        inv.setItem(49, banRankItem(Material.BARRIER, "&cSchließen", "", "close"));
+        GuiStyle.frame(inv);
+        player.openInventory(inv);
+    }
+
+    private String rankDisplay(String id) {
+        return plugin.getConfig().getString("ranks." + id + ".display", id);
+    }
+
+    private boolean defaultCanBan(String actor, String target) {
+        int actorWeight = plugin.getConfig().getInt("ranks." + actor + ".weight", 0);
+        int targetWeight = plugin.getConfig().getInt("ranks." + target + ".weight", 0);
+        return actorWeight > targetWeight;
+    }
+
+    private ItemStack banRankItem(Material material, String title, String lore, String action) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(color(title));
+        if (!lore.isEmpty()) meta.setLore(List.of(color(lore)));
+        meta.getPersistentDataContainer().set(banRankAction, PersistentDataType.STRING, action);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    @EventHandler
+    public void onBanRankGuiClick(InventoryClickEvent event) {
+        if (!(event.getView().getTopInventory().getHolder() instanceof BanRankHolder)) return;
+        event.setCancelled(true);
+        if (!(event.getWhoClicked() instanceof Player player) || event.getRawSlot() < 0
+                || event.getRawSlot() >= event.getView().getTopInventory().getSize()) return;
+        if (!player.hasPermission("servertoolkit.ban.manage")) { player.closeInventory(); deny(player); return; }
+        ItemStack item = event.getCurrentItem();
+        if (item == null || !item.hasItemMeta()) return;
+        String action = item.getItemMeta().getPersistentDataContainer().get(banRankAction, PersistentDataType.STRING);
+        if (action == null) return;
+        if (action.equals("close")) { player.closeInventory(); return; }
+        if (action.equals("back")) { openBanRankActors(player); return; }
+        if (action.startsWith("actor:")) { openBanRankTargets(player, action.substring(6)); return; }
+        if (action.startsWith("toggle:")) {
+            String[] parts = action.split(":", 3);
+            if (parts.length != 3) return;
+            String path = "ban-ranks." + parts[1] + "." + parts[2];
+            boolean current = data.getBoolean(path, defaultCanBan(parts[1], parts[2]));
+            data.set(path, !current);
+            save();
+            openBanRankTargets(player, parts[1]);
+        }
+    }
+
+    private static final class BanRankHolder implements InventoryHolder {
+        @Override public Inventory getInventory() { return null; }
+    }
+
+    private boolean canBanRank(Player source, OfflinePlayer target) {
+        if (source.isOp()) return true;
+        UtilityManager utility = plugin.utilityManager();
+        if (utility == null) return false;
+        String actorRank = utility.rankId(source);
+        String targetRank = utility.rankId(target);
+        return data.getBoolean("ban-ranks." + actorRank + "." + targetRank,
+                defaultCanBan(actorRank, targetRank));
     }
 
     public void handlePreset(CommandSender sender, String[] args) {
@@ -381,6 +492,12 @@ public final class ModerationManager implements Listener {
         Player source = event.getPlayer();
         if (!source.hasPermission("servertoolkit.ban")) { deny(source); return; }
         if (!data.isConfigurationSection("presets." + id)) { source.sendMessage(color("&cDieses Preset gibt es nicht mehr.")); return; }
+        if (!canBanRank(source, target)) {
+            source.sendMessage(color("&cDein Rang darf den Rang &f" +
+                    plugin.getConfig().getString("ranks." + plugin.utilityManager().rankId(target) + ".display", plugin.utilityManager().rankId(target)) +
+                    " &cnicht bannen."));
+            return;
+        }
         ban(source, target.getName(), id);
     }
 
