@@ -122,21 +122,33 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
             player.sendMessage(color("&cDieser Artikel ist nicht verfügbar."));
             return;
         }
-        if (player.getInventory().firstEmpty() < 0) {
-            player.sendMessage(color("&cDein Inventar ist voll."));
+        ItemStack purchase = new ItemStack(material, amount);
+        if (!canFit(player, purchase)) {
+            player.sendMessage(color("&cNicht genug Platz im Inventar."));
             return;
         }
         if (!plugin.economyManager().withdraw(player.getUniqueId(), price)) {
             player.sendMessage(color("&cDu hast nicht genug Coins. Dein Guthaben: &e" + plugin.economyManager().formatted(player.getUniqueId())));
             return;
         }
-        Map<Integer, ItemStack> leftovers = player.getInventory().addItem(new ItemStack(material, amount));
+        Map<Integer, ItemStack> leftovers = player.getInventory().addItem(purchase);
         if (!leftovers.isEmpty()) {
             plugin.economyManager().deposit(player.getUniqueId(), price);
             player.sendMessage(color("&cNicht genug Platz. Der Kauf wurde abgebrochen."));
             return;
         }
         player.sendMessage(color("&aGekauft: &f" + amount + "x " + pretty(id) + " &afür &6" + price + " Coins."));
+    }
+
+    private boolean canFit(Player player, ItemStack wanted) {
+        int capacity = 0;
+        int maxStack = wanted.getMaxStackSize();
+        for (ItemStack existing : player.getInventory().getStorageContents()) {
+            if (existing == null || existing.getType().isAir()) capacity += maxStack;
+            else if (existing.isSimilar(wanted)) capacity += Math.max(0, maxStack - existing.getAmount());
+            if (capacity >= wanted.getAmount()) return true;
+        }
+        return false;
     }
 
     private void sell(Player player, String[] args) {
