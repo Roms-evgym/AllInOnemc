@@ -1,5 +1,5 @@
 name: ServerToolkit
-version: 1.13.0
+version: 1.13.25
 main: dev.codex.servertoolkit.ServerToolkit
 api-version: '26.3'
 description: Kleine Lobby- und Survival-Werkzeuge in einem Plugin.
