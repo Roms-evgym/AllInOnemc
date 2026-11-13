@@ -36,6 +36,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     private LobbyManager lobbyManager;
     private EconomyManager economyManager;
     private PlayerFeaturesManager playerFeaturesManager;
+    private NetworkSyncManager networkSyncManager;
     private final Map<java.util.UUID, Long> rtpCooldowns = new HashMap<>();
 
     @Override
@@ -52,6 +53,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         economyManager = new EconomyManager(this);
         playerFeaturesManager = new PlayerFeaturesManager(this);
         utilityManager = new UtilityManager(this);
+        networkSyncManager = new NetworkSyncManager(this);
         marketManager = new MarketManager(this);
         kitManager = new KitManager(this);
         moderationManager = new ModerationManager(this);
@@ -72,6 +74,8 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     @Override
     public void onDisable() {
         if (maceManager != null) maceManager.shutdown();
+        getServer().getMessenger().unregisterIncomingPluginChannel(this, NetworkSyncManager.CHANNEL);
+        getServer().getMessenger().unregisterOutgoingPluginChannel(this, NetworkSyncManager.CHANNEL);
     }
 
     @Override
@@ -147,6 +151,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
 
     UtilityManager utilityManager() { return utilityManager; }
     EconomyManager economyManager() { return economyManager; }
+    NetworkSyncManager networkSyncManager() { return networkSyncManager; }
 
     private String[] prepend(String first, String[] rest) {
         String[] result = new String[rest.length + 1];
