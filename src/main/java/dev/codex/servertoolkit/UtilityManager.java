@@ -211,12 +211,14 @@ public final class UtilityManager implements CommandExecutor, Listener {
                 String id = args[2].toLowerCase(Locale.ROOT);
                 if (!plugin.getConfig().isConfigurationSection("ranks." + id)) { player.sendMessage(color("&cUnbekannter Rang. /rank list")); return; }
                 rankData.set("players." + target.getUniqueId(), id); saveRanks(); refreshPlayer(target.getPlayer());
+                if (target.isOnline()) plugin.networkSyncManager().publish(target.getPlayer());
                 player.sendMessage(color("&aRang " + rankPrefix(id) + " &afür &f" + args[1] + " &agesetzt."));
             }
             case "remove" -> {
                 if (args.length < 2) { player.sendMessage(color("&c/rank remove <Spieler>")); return; }
                 OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
                 rankData.set("players." + target.getUniqueId(), null); saveRanks(); refreshPlayer(target.getPlayer());
+                if (target.isOnline()) plugin.networkSyncManager().publish(target.getPlayer());
                 player.sendMessage(color("&aEigener Rang von &f" + args[1] + " &azurückgesetzt."));
             }
             case "create" -> {
@@ -449,6 +451,15 @@ public final class UtilityManager implements CommandExecutor, Listener {
     private String getRankId(OfflinePlayer player) { return rankData.getString("players." + player.getUniqueId(), "member"); }
     public String rankId(Player player) { return getRankId(player); }
     public String rankId(OfflinePlayer player) { return getRankId(player); }
+
+    void applySyncedRank(UUID uuid, String rankId) {
+        if (!plugin.getConfig().isConfigurationSection("ranks." + rankId)) {
+            plugin.getLogger().warning("Proxy sent unknown rank '" + rankId + "'; keeping it as the player's rank id.");
+        }
+        rankData.set("players." + uuid, rankId);
+        saveRanks();
+        refreshPlayer(Bukkit.getPlayer(uuid));
+    }
     public int maxHomes(Player player) { return Math.max(1, plugin.getConfig().getInt("ranks." + getRankId(player) + ".max-homes", 1)); }
     private String rankPrefix(String id) { return color(plugin.getConfig().getString("ranks." + id + ".prefix", "&7")); }
     private void saveRanks() { try { rankData.save(rankFile); } catch (IOException e) { plugin.getLogger().severe("Konnte ranks.yml nicht speichern: " + e.getMessage()); } }
@@ -516,6 +527,7 @@ public final class UtilityManager implements CommandExecutor, Listener {
             Player target = Bukkit.getPlayer(UUID.fromString(parts[2]));
             if (target == null) { player.sendMessage(color("&cDer Spieler ist nicht mehr online.")); openRankAssignees(player, parts[1]); return; }
             rankData.set("players." + target.getUniqueId(), parts[1]); saveRanks(); refreshPlayer(target);
+            plugin.networkSyncManager().publish(target);
             player.sendMessage(color("&aRang &f" + parts[1] + " &aan &f" + target.getName() + " &avergeben."));
             openRankEditor(player, parts[1]); return;
         }
