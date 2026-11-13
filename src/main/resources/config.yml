@@ -7,7 +7,7 @@ proxy:
   lobby-server: Lobby
 
 # Spieler werden beim Beitritt zum gesetzten Spawn teleportiert.
-teleport-to-spawn-on-join: true
+teleport-to-spawn-on-join: false
 
 # In der Lobby werden Bauen, Abbauen, Schaden und Item-Drops blockiert.
 lobby-protection: true
@@ -19,32 +19,23 @@ lobby:
     enabled: true
     y: -10
   protection:
-    hunger: true
-    item-pickup: true
+    hunger: false
+    item-pickup: false
   selector:
     give-on-join: true
     item: COMPASS
     item-name: "&c&lServer auswählen"
-    item-slot: 4
+    item-slot: 1
     title: "&8» &c&lServer-Auswahl"
     servers:
       survival:
-        target: allinsurvival
+        target: survival
         name: "&c&lSurvival"
         material: IRON_SWORD
         slot: 11
         lore:
           - "&7Baue, überlebe und spiele mit Freunden."
           - "&eKlicken zum Verbinden"
-      mace:
-        target: AllInOne
-        name: "&6&lMace PvP"
-        material: MACE
-        slot: 15
-        lore:
-          - "&7Kämpfe mit der Mace."
-          - "&eKlicken zum Verbinden"
-
 # Lobby-Titel beim Beitritt.
 join-title: "&aWillkommen"
 join-subtitle: "&7Viel Spaß auf dem Server!"
