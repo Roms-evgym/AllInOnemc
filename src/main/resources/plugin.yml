@@ -1,5 +1,5 @@
 name: ServerToolkit
-version: 1.13.25
+version: 1.14.0
 main: dev.codex.servertoolkit.ServerToolkit
 api-version: '26.3'
 description: Kleine Lobby- und Survival-Werkzeuge in einem Plugin.
@@ -40,7 +40,7 @@ commands:
     description: Nimmt eine offene Teleportanfrage an.
     usage: /tpaccept
   tpdeny:
-    description: Lehnt eine offene Teleportanfrage ab.
+    description: Lehnt eine Teleportanfrage ab.
     usage: /tpdeny
   clan:
     description: Clan-System
