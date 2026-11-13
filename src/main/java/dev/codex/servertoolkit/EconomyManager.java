@@ -127,6 +127,17 @@ public final class EconomyManager {
     private void setBalance(UUID uuid, BigDecimal value) {
         data.set("balances." + uuid, amount(value).toPlainString()); save();
         Player player = Bukkit.getPlayer(uuid);
+        if (player != null && plugin.utilityManager() != null) {
+            plugin.utilityManager().updateScoreboard(player);
+            if (plugin.networkSyncManager() != null) plugin.networkSyncManager().publish(player);
+        }
+    }
+
+    void applySyncedBalance(UUID uuid, BigDecimal value) {
+        if (value.signum() < 0) return;
+        data.set("balances." + uuid, amount(value).toPlainString());
+        save();
+        Player player = Bukkit.getPlayer(uuid);
         if (player != null && plugin.utilityManager() != null) plugin.utilityManager().updateScoreboard(player);
     }
     private void save() {
