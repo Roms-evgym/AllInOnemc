@@ -18,7 +18,7 @@ Ein Paper-Plugin für ein Survival-SMP mit Mace-PvP. Es läuft auf Paper 26.3 un
 - Sitzen: `/sit` zum Hinsetzen und Aufstehen, ohne GSit-Abhängigkeit
 - Admin-Weltwerkzeuge: `/fakebase` platziert eine kleine Täuschungsbasis; `/fakore <erz> [anzahl]` setzt eine Erzader unter dem Admin (1–64 Blöcke)
 - Ränge: `/rank gui` öffnet die Rangverwaltung. Dort lassen sich Ränge erstellen, Prefix/Farbe und Anzeigename ändern, Gewicht und Home-Limit setzen, Berechtigungen umschalten und Ränge an Online-Spieler vergeben. Definitionen stehen in `config.yml`, Zuweisungen in `plugins/ServerToolkit/ranks.yml`.
-- Netzwerk-Sync: ServerToolkit 1.14.0 synchronisiert Ränge und Guthaben über den BungeeCord-Proxy mit AllInOneBungee 1.1.0. Die Proxy-Datei `plugins/AllInOneBungee/players.yml` ist der zentrale Speicher. Die Bungee-Servernamen `lobby` und `survival` müssen in der Proxy-Konfiguration unter `allowed-servers` stehen.
+- Netzwerk-Sync: ServerToolkit 1.14.1 synchronisiert Ränge und Guthaben über den BungeeCord-Proxy mit AllInOneBungee 1.1.0. Die Proxy-Datei `plugins/AllInOneBungee/players.yml` ist der zentrale Speicher. Die Bungee-Servernamen `lobby` und `survival` müssen in der Proxy-Konfiguration unter `allowed-servers` stehen.
 - Voice-Menü: `/voice` zeigt die Simple-Voice-Chat-Hilfe; `/voice color <&Farbcode>` ändert die Menüfarbe. Die Client-GUI öffnet sich standardmäßig mit `V`.
 - Inventar-Menüs verwenden eine gemeinsame AllInOne-Survival-Menüoptik mit dunklem Rand und roten Akzenten.
 - Eigenes Economy-System: `/money`, `/money pay <Spieler> <Betrag>`, `/pay <Spieler> <Betrag>`; Admins nutzen `/eco give|take|set <Spieler> <Betrag>`. Guthaben liegt in `plugins/ServerToolkit/economy.yml`.
@@ -29,7 +29,7 @@ Rangpräfixe erscheinen im Chat-Anzeigenamen und in der TAB-Spielerliste. Vanish
 
 ## Einrichtung
 
-1. Mit `mvn package -DskipTests` bauen. Die JAR liegt unter `target/servertoolkit-1.14.0.jar`.
+1. Mit `mvn package -DskipTests` bauen. Die JAR liegt unter `target/servertoolkit-1.14.1.jar`.
 2. JAR nach `plugins/` auf jedem Paper-Backend (Lobby und Survival) laden und die Server neu starten.
 3. Für die Netzwerk-Synchronisierung zusätzlich AllInOneBungee 1.1.0 auf dem Proxy installieren; beide Plugin-Seiten müssen aktiv sein.
 4. Als Operator den Survival-Spawn mit `/setspawn` setzen.
