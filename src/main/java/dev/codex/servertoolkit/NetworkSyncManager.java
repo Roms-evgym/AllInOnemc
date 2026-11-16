@@ -65,6 +65,15 @@ public final class NetworkSyncManager implements Listener, PluginMessageListener
         if (!CHANNEL.equals(channel) || message.length > 4096) return;
         try (DataInputStream in = new DataInputStream(new ByteArrayInputStream(message))) {
             String operation = in.readUTF();
+            if ("REQUEST_ALL".equals(operation)) {
+                if (in.available() != 0) return;
+                for (Player online : Bukkit.getOnlinePlayers()) {
+                    publish(online);
+                }
+                plugin.getLogger().info("Proxy requested a full rank and balance sync; published "
+                        + Bukkit.getOnlinePlayers().size() + " online player(s).");
+                return;
+            }
             UUID uuid = UUID.fromString(in.readUTF());
             String rank = in.readUTF();
             BigDecimal balance = new BigDecimal(in.readUTF());
