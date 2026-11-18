@@ -39,6 +39,7 @@ import java.util.Comparator;
 import java.util.List;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.permissions.PermissionAttachment;
+import org.bukkit.permissions.Permission;
 
 public final class UtilityManager implements CommandExecutor, Listener {
     private final ServerToolkit plugin;
@@ -327,6 +328,8 @@ public final class UtilityManager implements CommandExecutor, Listener {
         inv.setItem(20, actionItem(Material.RED_DYE, "&cRanggewicht −", "&7Aktuell: " + weight, "weight-:" + id));
         inv.setItem(21, menuItem(Material.PAPER, "&6Gewicht: &f" + weight, "&7Höhere Gewichte erscheinen weiter oben."));
         inv.setItem(22, actionItem(Material.LIME_DYE, "&aRanggewicht +", "&7Aktuell: " + weight, "weight+:" + id));
+        inv.setItem(24, actionItem(Material.COMMAND_BLOCK, "&bVanilla-/Server-Rechte", "&7Alle registrierten Permission-Nodes", "vanillaperms:" + id));
+        inv.setItem(25, actionItem(Material.WRITABLE_BOOK, "&eEigenes Recht hinzufügen", "&7Permission-Node im Chat eingeben", "vanillaadd:" + id));
 
         List<String> permissions = rankPermissionChoices(id);
         int slot = 28;
@@ -354,6 +357,42 @@ public final class UtilityManager implements CommandExecutor, Listener {
         }
         inv.setItem(49, actionItem(Material.ARROW, "&7Zurück", "", "edit:" + rankId));
         GuiStyle.frame(inv); player.openInventory(inv);
+    }
+
+    private void openVanillaPermissionMenu(Player player, String id, int page) {
+        if (!canManageRanks(player) || !plugin.getConfig().isConfigurationSection("ranks." + id)) return;
+        List<String> nodes = new ArrayList<>(Bukkit.getPluginManager().getPermissions().stream()
+                .map(Permission::getName).toList());
+        nodes.addAll(List.of(
+                "minecraft.command.help", "minecraft.command.list", "minecraft.command.me",
+                "minecraft.command.msg", "minecraft.command.say", "minecraft.command.teleport",
+                "minecraft.command.gamemode", "minecraft.command.give", "minecraft.command.effect",
+                "minecraft.command.enchant", "minecraft.command.time", "minecraft.command.weather",
+                "minecraft.command.clear", "minecraft.command.kick", "minecraft.command.ban",
+                "minecraft.command.pardon", "minecraft.command.op", "minecraft.command.deop",
+                "minecraft.command.whitelist", "minecraft.command.stop", "minecraft.command.save-all"
+        ));
+        nodes = nodes.stream().filter(node -> node != null && node.matches("[a-zA-Z0-9_.:-]+"))
+                .distinct().sorted(String.CASE_INSENSITIVE_ORDER).toList();
+        int maxPage = Math.max(0, (nodes.size() - 1) / 45);
+        int currentPage = Math.max(0, Math.min(page, maxPage));
+        Inventory inv = Bukkit.createInventory(new MenuHolder("rank-permissions", id), 54,
+                GuiStyle.title("Rechte " + id + " " + (currentPage + 1) + "/" + (maxPage + 1)));
+        List<String> enabled = plugin.getConfig().getStringList("ranks." + id + ".permissions");
+        int start = currentPage * 45;
+        for (int i = start; i < Math.min(nodes.size(), start + 45); i++) {
+            String node = nodes.get(i);
+            boolean active = enabled.contains(node);
+            ItemStack item = menuItem(active ? Material.LIME_DYE : Material.GRAY_DYE,
+                    (active ? "&a✔ " : "&7✖ ") + node,
+                    active ? "&eKlicken zum Entfernen" : "&eKlicken zum Hinzufügen");
+            setMenuAction(item, "vanillaperm:" + id + ":" + currentPage + ":" + node);
+            inv.setItem(i - start, item);
+        }
+        if (currentPage > 0) inv.setItem(45, actionItem(Material.ARROW, "&eVorherige Seite", "", "vanillapage:" + id + ":" + (currentPage - 1)));
+        inv.setItem(49, actionItem(Material.BOOK, "&7Zurück zum Rang", "", "edit:" + id));
+        if (currentPage < maxPage) inv.setItem(53, actionItem(Material.ARROW, "&eNächste Seite", "", "vanillapage:" + id + ":" + (currentPage + 1)));
+        player.openInventory(inv);
     }
 
     private List<String> rankPermissionChoices(String id) {
@@ -386,6 +425,7 @@ public final class UtilityManager implements CommandExecutor, Listener {
                 ? "&eGib den neuen Prefix mit optionalen &-Farbcodes im Chat ein."
                 : type.equals("display") ? "&eGib den neuen Anzeigenamen im Chat ein." : "&eGib eine Rang-ID ein (a-z, 0-9, _ oder -)."));
         player.sendMessage(color("&7Abbrechen mit: &fcancel"));
+        if (type.equals("permission")) player.sendMessage(color("&7Beispiel: &fminecraft.command.gamemode"));
     }
 
     @EventHandler
@@ -414,6 +454,24 @@ public final class UtilityManager implements CommandExecutor, Listener {
             }
             if (!plugin.getConfig().isConfigurationSection("ranks." + pending.rankId())) {
                 pendingRankInputs.remove(uuid); player.sendMessage(color("&cDieser Rang existiert nicht mehr.")); return;
+            }
+            if (pending.type().equals("permission")) {
+                pendingRankInputs.remove(uuid);
+                String node = text.toLowerCase(Locale.ROOT);
+                if (!node.matches("[a-z0-9_.:-]+") || node.contains("*")) {
+                    player.sendMessage(color("&cUngültiger Permission-Node. Wildcards sind nicht erlaubt."));
+                    openVanillaPermissionMenu(player, pending.rankId(), 0);
+                    return;
+                }
+                String path = "ranks." + pending.rankId() + ".permissions";
+                List<String> permissions = new ArrayList<>(plugin.getConfig().getStringList(path));
+                if (!permissions.contains(node)) permissions.add(node);
+                plugin.getConfig().set(path, permissions);
+                plugin.saveConfig();
+                for (Player online : Bukkit.getOnlinePlayers()) if (getRankId(online).equals(pending.rankId())) refreshPlayer(online);
+                player.sendMessage(color("&aPermission &f" + node + " &awurde hinzugefügt."));
+                openVanillaPermissionMenu(player, pending.rankId(), 0);
+                return;
             }
             if (text.isBlank() || text.length() > 48 || text.chars().anyMatch(Character::isISOControl)) {
                 player.sendMessage(color("&cText muss 1 bis 48 Zeichen lang sein.")); return;
@@ -550,6 +608,29 @@ public final class UtilityManager implements CommandExecutor, Listener {
             String path = "ranks." + id + ".weight";
             int value = plugin.getConfig().getInt(path, 0) + (action.charAt(6) == '+' ? 1 : -1);
             plugin.getConfig().set(path, Math.max(-1000, Math.min(1000, value))); plugin.saveConfig(); openRankEditor(player, id); return;
+        }
+        if (action.startsWith("vanillaperms:")) {
+            openVanillaPermissionMenu(player, action.substring("vanillaperms:".length()), 0); return;
+        }
+        if (action.startsWith("vanillaadd:")) {
+            promptRankInput(player, "permission", action.substring("vanillaadd:".length())); return;
+        }
+        if (action.startsWith("vanillapage:")) {
+            String[] parts = action.split(":", 3);
+            if (parts.length == 3) openVanillaPermissionMenu(player, parts[1], Integer.parseInt(parts[2]));
+            return;
+        }
+        if (action.startsWith("vanillaperm:")) {
+            String[] parts = action.split(":", 4);
+            if (parts.length != 4) return;
+            String path = "ranks." + parts[1] + ".permissions";
+            List<String> permissions = new ArrayList<>(plugin.getConfig().getStringList(path));
+            if (!permissions.remove(parts[3])) permissions.add(parts[3]);
+            plugin.getConfig().set(path, permissions);
+            plugin.saveConfig();
+            for (Player online : Bukkit.getOnlinePlayers()) if (getRankId(online).equals(parts[1])) refreshPlayer(online);
+            openVanillaPermissionMenu(player, parts[1], Integer.parseInt(parts[2]));
+            return;
         }
         if (action.startsWith("perm:")) {
             String[] parts = action.split(":", 3);
