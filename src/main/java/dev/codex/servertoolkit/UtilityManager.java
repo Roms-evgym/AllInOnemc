@@ -423,7 +423,9 @@ public final class UtilityManager implements CommandExecutor, Listener {
         player.closeInventory();
         player.sendMessage(color(type.equals("prefix")
                 ? "&eGib den neuen Prefix mit optionalen &-Farbcodes im Chat ein."
-                : type.equals("display") ? "&eGib den neuen Anzeigenamen im Chat ein." : "&eGib eine Rang-ID ein (a-z, 0-9, _ oder -)."));
+                : type.equals("display") ? "&eGib den neuen Anzeigenamen im Chat ein."
+                : type.equals("permission") ? "&eGib den Permission-Node ein, der diesem Rang hinzugefügt werden soll."
+                : "&eGib eine Rang-ID ein (a-z, 0-9, _ oder -)."));
         player.sendMessage(color("&7Abbrechen mit: &fcancel"));
         if (type.equals("permission")) player.sendMessage(color("&7Beispiel: &fminecraft.command.gamemode"));
     }
