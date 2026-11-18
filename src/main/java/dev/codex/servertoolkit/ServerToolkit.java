@@ -27,6 +27,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public final class ServerToolkit extends JavaPlugin implements Listener, CommandExecutor {
     private boolean lobbyMode;
     private ClanManager clanManager;
+    private ClanDuelManager clanDuelManager;
     private MaceManager maceManager;
     private UtilityManager utilityManager;
     private MarketManager marketManager;
@@ -49,6 +50,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         lobbyMode = getConfig().getString("mode", "LOBBY").equalsIgnoreCase("LOBBY");
         getServer().getPluginManager().registerEvents(this, this);
         clanManager = new ClanManager(this);
+        clanDuelManager = new ClanDuelManager(this, clanManager);
         maceManager = new MaceManager(this, clanManager);
         economyManager = new EconomyManager(this);
         playerFeaturesManager = new PlayerFeaturesManager(this);
@@ -60,7 +62,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         sitManager = new SitManager(this);
         lobbyManager = new LobbyManager(this);
         WorldSpawnManager worldSpawnManager = new WorldSpawnManager();
-        for (String name : new String[]{"spawn", "setspawn", "sethome", "home", "homes", "delhome", "rtp", "clan", "mace",
+        for (String name : new String[]{"spawn", "setspawn", "sethome", "home", "homes", "delhome", "rtp", "clan", "clanduel", "mace",
                 "fly", "god", "invsee", "echest", "ecsee", "trash", "ranks", "rank", "voice", "ah", "order", "orders", "kit",
                 "ban", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "servers", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny"}) {
             getCommand(name).setExecutor(this);
@@ -136,6 +138,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             case "delhome" -> deleteHome(player, args);
             case "rtp" -> playerFeaturesManager.onCommand(sender, command, label, args);
             case "clan" -> clanManager.handle(player, args);
+            case "clanduel" -> clanDuelManager.handle(sender, args);
             case "mace" -> maceManager.onCommand(sender, command, label, args);
             case "fly", "god", "invsee", "echest", "ecsee", "trash", "ranks", "rank", "voice" ->
                     utilityManager.onCommand(sender, command, label, args);
