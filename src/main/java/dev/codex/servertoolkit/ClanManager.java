@@ -66,6 +66,31 @@ public final class ClanManager {
         return key == null ? null : data.getString("clans." + key + ".name", key);
     }
 
+    public List<String> clanKeysWithOnlineMembers() {
+        ConfigurationSection section = data.getConfigurationSection("clans");
+        if (section == null) return List.of();
+        List<String> result = new ArrayList<>();
+        for (String key : section.getKeys(false)) {
+            if (!onlineMembers(key).isEmpty()) result.add(key);
+        }
+        return result;
+    }
+
+    public List<Player> onlineMembers(String key) {
+        List<Player> result = new ArrayList<>();
+        for (String id : data.getStringList("clans." + key + ".members")) {
+            try {
+                Player player = Bukkit.getPlayer(UUID.fromString(id));
+                if (player != null && player.isOnline()) result.add(player);
+            } catch (IllegalArgumentException ignored) { }
+        }
+        return result;
+    }
+
+    public String displayName(String key) {
+        return data.getString("clans." + key + ".name", key);
+    }
+
     public void recordMaceWin(UUID playerId) {
         String key = clanKey(playerId);
         if (key == null) return;
