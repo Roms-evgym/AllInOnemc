@@ -453,8 +453,16 @@ public final class UtilityManager implements CommandExecutor, Listener {
     public String rankId(OfflinePlayer player) { return getRankId(player); }
 
     void applySyncedRank(UUID uuid, String rankId) {
-        if (!plugin.getConfig().isConfigurationSection("ranks." + rankId)) {
-            plugin.getLogger().warning("Proxy sent unknown rank '" + rankId + "'; keeping it as the player's rank id.");
+        String path = "ranks." + rankId;
+        if (!plugin.getConfig().isConfigurationSection(path)) {
+            // Create a safe placeholder so custom ranks can travel between servers
+            // even when their local rank configuration has not been copied yet.
+            plugin.getConfig().set(path + ".display", rankId);
+            plugin.getConfig().set(path + ".prefix", "&7" + rankId.toUpperCase(Locale.ROOT));
+            plugin.getConfig().set(path + ".weight", 0);
+            plugin.getConfig().set(path + ".max-homes", 1);
+            plugin.saveConfig();
+            plugin.getLogger().warning("Proxy sent rank '" + rankId + "' which was not configured locally; created a basic rank entry. Copy its full rank configuration to synchronize permissions and prefix.");
         }
         rankData.set("players." + uuid, rankId);
         saveRanks();
