@@ -31,6 +31,7 @@ public final class ClanDuelManager implements Listener {
     private final ServerToolkit plugin;
     private final ClanManager clans;
     private Match activeMatch;
+    private final Map<UUID, Location> pendingRespawns = new HashMap<>();
 
     public ClanDuelManager(ServerToolkit plugin, ClanManager clans) {
         this.plugin = plugin;
@@ -182,9 +183,14 @@ public final class ClanDuelManager implements Listener {
 
     @EventHandler
     public void onRespawn(PlayerRespawnEvent event) {
-        if (activeMatch == null || !isParticipant(event.getPlayer().getUniqueId())) return;
-        Location back = activeMatch.returnLocations.get(event.getPlayer().getUniqueId());
-        if (back != null) event.setRespawnLocation(back);
+        UUID id = event.getPlayer().getUniqueId();
+        if (activeMatch != null && isParticipant(id)) {
+            Location back = activeMatch.returnLocations.get(id);
+            if (back != null) event.setRespawnLocation(back);
+            return;
+        }
+        Location pending = pendingRespawns.remove(id);
+        if (pending != null) event.setRespawnLocation(pending);
     }
 
     @EventHandler
@@ -209,7 +215,10 @@ public final class ClanDuelManager implements Listener {
         for (UUID id : match.allPlayers()) {
             Player player = Bukkit.getPlayer(id);
             Location back = match.returnLocations.get(id);
-            if (player != null && back != null) player.teleport(back);
+            if (player != null && back != null) {
+                if (player.isDead()) pendingRespawns.put(id, back);
+                else player.teleport(back);
+            }
         }
         if (message != null) Bukkit.broadcastMessage(color("&e" + message));
         else Bukkit.broadcastMessage(color("&6&lCLAN-DUEL &a" + clans.displayName(winner) + " &7hat gewonnen!"));
