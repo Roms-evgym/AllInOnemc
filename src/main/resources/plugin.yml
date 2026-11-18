@@ -48,6 +48,10 @@ commands:
   mace:
     description: Mace-Duelle, Statistiken und Turniere
     usage: /mace
+  clanduel:
+    description: Startet ein Clan-Duel zwischen zwei zufälligen Clans.
+    usage: /clanduel [stop]
+    permission: servertoolkit.clanduel
   fly:
     description: Schaltet Fliegen um
     usage: /fly [Spieler]
@@ -165,6 +169,9 @@ permissions:
     default: false
   servertoolkit.rank.manage:
     description: Darf eigene Ränge erstellen und vergeben.
+    default: op
+  servertoolkit.clanduel:
+    description: Darf zufällige Clan-Duelle starten und beenden.
     default: op
   servertoolkit.rtp:
     description: Darf Zufallsteleport benutzen.
