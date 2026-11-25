@@ -241,8 +241,8 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             case "invsee", "ecsee" -> "servertoolkit.staff";
             case "rank", "ranks" -> "servertoolkit.rank.manage";
             case "setcode" -> "servertoolkit.code.create";
-            case "lag" -> "servertoolkit.lag";
-            case "crash" -> "servertoolkit.crash";
+            case "lag" -> "servertoolkit.command.lag";
+            case "crash" -> "servertoolkit.command.crash";
             case "nick" -> "servertoolkit.nick";
             case "ban", "punish" -> "servertoolkit.ban";
             case "banpreset", "banrank", "banhammer" -> "servertoolkit.ban.manage";
