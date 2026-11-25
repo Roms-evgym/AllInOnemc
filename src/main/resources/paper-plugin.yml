@@ -4,3 +4,119 @@ main: dev.codex.servertoolkit.ServerToolkit
 bootstrapper: dev.codex.servertoolkit.ServerToolkitBootstrap
 api-version: '26.3'
 description: AllInOneMC server features and native Minecraft dialogs
+dependencies:
+  server:
+    floodgate:
+      load: BEFORE
+      required: false
+      join-classpath: true
+permissions:
+  servertoolkit.menu.open:
+    description: Darf das AllInOne-Hauptmenü öffnen.
+    default: true
+  servertoolkit.menu.spawn:
+    description: Darf den Spawn-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.rtp:
+    description: Darf den RTP-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.shop:
+    description: Darf den Shop-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.sell:
+    description: Darf den Verkaufen-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.clan:
+    description: Darf den Clan-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.kit:
+    description: Darf den Kit-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.ranks:
+    description: Darf den Rangverwaltungs-Eintrag im Hauptmenü verwenden.
+    default: op
+  servertoolkit.menu.ah:
+    description: Darf den Auktionshaus-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.orders:
+    description: Darf den Aufträge-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.mace:
+    description: Darf den Mace-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.servers:
+    description: Darf den Serverwechsel-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.homes:
+    description: Darf den Homes-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.voice:
+    description: Darf den Voice-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.bounty:
+    description: Darf den Kopfgeld-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.playtime:
+    description: Darf den Spielzeit-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.admin:
+    description: Darf Server-Spawn, Mace-Arena und Events verwalten.
+    default: op
+  servertoolkit.staff:
+    description: Darf Spieler-Inventare und Enderchests ansehen.
+    default: op
+  servertoolkit.fly:
+    description: Darf Fliegen aktivieren.
+    default: op
+  servertoolkit.god:
+    description: Darf God-Modus aktivieren.
+    default: op
+  servertoolkit.rank.owner:
+    default: false
+  servertoolkit.rank.admin:
+    default: false
+  servertoolkit.rank.moderator:
+    default: false
+  servertoolkit.rank.helper:
+    default: false
+  servertoolkit.rank.vip:
+    default: false
+  servertoolkit.rank.manage:
+    description: Darf eigene Ränge erstellen und vergeben.
+    default: op
+  servertoolkit.clanduel:
+    description: Darf zufällige Clan-Duelle starten und beenden.
+    default: op
+  servertoolkit.rtp:
+    description: Darf Zufallsteleport benutzen.
+    default: true
+  servertoolkit.voice.manage:
+    description: Darf die Farbe des Voicechat-Menüs ändern.
+    default: op
+  servertoolkit.kit.manage:
+    description: Darf Kits erstellen, löschen und Cooldowns einstellen.
+    default: op
+  servertoolkit.code.create:
+    description: Darf Belohnungscodes erstellen.
+    default: op
+  servertoolkit.ban:
+    description: Darf Spieler mit Ban-Presets bannen.
+    default: op
+  servertoolkit.ban.manage:
+    description: Darf Ban-Presets verwalten und Banhammer ausgeben.
+    default: op
+  servertoolkit.vanish:
+    description: Darf Vanish aktivieren.
+    default: op
+  servertoolkit.vanish.manage:
+    description: Darf die Rang-Sichtbarkeit von Vanish konfigurieren.
+    default: op
+  servertoolkit.vanish.see:
+    description: Darf jeden versteckten Spieler sehen.
+    default: op
+  servertoolkit.money.pay:
+    description: Darf Guthaben an andere Spieler senden.
+    default: true
+  servertoolkit.eco.admin:
+    description: Darf ServerToolkit-Guthaben verwalten.
+    default: op
