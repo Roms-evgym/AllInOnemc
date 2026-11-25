@@ -2,10 +2,10 @@ package dev.codex.servertoolkit;
 
 import io.papermc.paper.dialog.Dialog;
 import io.papermc.paper.registry.data.dialog.DialogBase;
-import io.papermc.paper.registry.data.dialog.action.ActionButton;
+import io.papermc.paper.registry.data.dialog.ActionButton;
 import io.papermc.paper.registry.data.dialog.action.DialogAction;
 import io.papermc.paper.registry.data.dialog.type.DialogType;
-import io.papermc.paper.dialog.ClickCallback;
+import net.kyori.adventure.text.event.ClickCallback;
 import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -45,26 +45,28 @@ public final class PopupMenuManager {
     }
 
     private void openBedrockMenu(FloodgateApi api, Player player) {
-        SimpleForm.Builder form = SimpleForm.builder()
+        SimpleForm form = SimpleForm.builder()
                 .title("§l§6AllInOneMC")
-                .content("§7Wähle einen Bereich aus.");
-
-        addBedrockButton(form, player, "§aSpawn", "spawn");
-        addBedrockButton(form, player, "§bZufalls-Teleport", "rtp");
-        addBedrockButton(form, player, "§6Shop", "shop");
-        addBedrockButton(form, player, "§eVerkaufen", "sell hand");
-        addBedrockButton(form, player, "§dClans", "clan");
-        addBedrockButton(form, player, "§cMace-Duelle", "mace");
-        addBedrockButton(form, player, "§fRänge", "ranks");
-        addBedrockButton(form, player, "§9Server wechseln", "servers");
-        addBedrockButton(form, player, "§aHomes", "homes");
-        addBedrockButton(form, player, "§bVoice-Chat", "voice");
-
+                .content("§7Wähle einen Bereich aus.")
+                .button("§aSpawn")
+                .button("§bZufalls-Teleport")
+                .button("§6Shop")
+                .button("§eVerkaufen")
+                .button("§dClans")
+                .button("§cMace-Duelle")
+                .button("§fRänge")
+                .button("§9Server wechseln")
+                .button("§aHomes")
+                .button("§bVoice-Chat")
+                .validResultHandler(response -> {
+                    String[] commands = {"spawn", "rtp", "shop", "sell hand", "clan", "mace", "ranks", "servers", "homes", "voice"};
+                    int selected = response.clickedButtonId();
+                    if (selected >= 0 && selected < commands.length) {
+                        player.performCommand(commands[selected]);
+                    }
+                })
+                .build();
         api.sendForm(player.getUniqueId(), form);
-    }
-
-    private void addBedrockButton(SimpleForm.Builder form, Player player, String label, String command) {
-        form.button(label, response -> player.performCommand(command));
     }
 
     private void openJavaMenu(Player player) {
