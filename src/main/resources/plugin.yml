@@ -362,3 +362,15 @@ permissions:
   servertoolkit.eco.admin:
     description: Darf ServerToolkit-Guthaben verwalten.
     default: op
+  servertoolkit.lag:
+    description: Darf zustimmungsbasierte Lag-Content-Simulationen starten.
+    default: op
+  servertoolkit.crash:
+    description: Darf zustimmungsbasierte Crash-Content-Simulationen starten.
+    default: op
+  servertoolkit.nick:
+    description: Darf den eigenen Nickname und Skin ändern.
+    default: true
+  servertoolkit.nick.others:
+    description: Darf andere Spieler für Content nicken.
+    default: op
