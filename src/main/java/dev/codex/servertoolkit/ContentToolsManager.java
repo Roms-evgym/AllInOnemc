@@ -199,6 +199,9 @@ final class ContentToolsManager implements Listener {
             tries++;
         } while (tries < 30 && (Bukkit.getPlayerExact(nick) != null || isNickInUse(nick)));
         String selectedNick = nick;
+        var rankSection = plugin.getConfig().getConfigurationSection("ranks");
+        List<String> rankIds = rankSection == null ? List.of("member") : new java.util.ArrayList<>(rankSection.getKeys(false));
+        String selectedRank = rankIds.isEmpty() ? "member" : rankIds.get(ThreadLocalRandom.current().nextInt(rankIds.size()));
         NickSession old = nickSessions.get(player.getUniqueId());
         PlayerProfile original = old == null ? player.getPlayerProfile() : old.originalProfile;
         String skinName = SKIN_PROFILES.get(ThreadLocalRandom.current().nextInt(SKIN_PROFILES.size()));
@@ -209,10 +212,12 @@ final class ContentToolsManager implements Listener {
             PlayerProfile disguised = Bukkit.createProfile(player.getUniqueId(), selectedNick);
             if (error == null && skinProfile != null && skinProfile.hasTextures()) disguised.setProperties(skinProfile.getProperties());
             else disguised.setProperties(original.getProperties());
-            nickSessions.put(player.getUniqueId(), new NickSession(original, selectedNick));
+            nickSessions.put(player.getUniqueId(), new NickSession(original, selectedNick, selectedRank));
             player.setPlayerProfile(disguised);
             plugin.utilityManager().refreshPlayerDisplay(player);
-            player.sendMessage("§aDu bist jetzt §f" + selectedNick + "§a. Rang und echter Account bleiben intern unverändert.");
+            String rankDisplay = plugin.getConfig().getString("ranks." + selectedRank + ".display", selectedRank);
+            player.sendMessage("§aDein Nick-Profil: §f" + selectedNick + " §7| §e" + rankDisplay
+                    + "§a. Skin und Rang-Anzeige sind zufällig; echte Rechte bleiben unverändert.");
             if (sender != player) sender.sendMessage("§aNick für " + player.getName() + " gesetzt: " + selectedNick);
         }));
     }
@@ -230,6 +235,11 @@ final class ContentToolsManager implements Listener {
         return session == null ? null : session.nick;
     }
 
+    String nickRankId(Player player) {
+        NickSession session = nickSessions.get(player.getUniqueId());
+        return session == null ? null : session.rankId;
+    }
+
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         UUID id = event.getPlayer().getUniqueId();
@@ -241,5 +251,5 @@ final class ContentToolsManager implements Listener {
     }
 
     private record LagSession(int task, Map<PotionEffectType, PotionEffect> previous) {}
-    private record NickSession(PlayerProfile originalProfile, String nick) {}
+    private record NickSession(PlayerProfile originalProfile, String nick, String rankId) {}
 }
