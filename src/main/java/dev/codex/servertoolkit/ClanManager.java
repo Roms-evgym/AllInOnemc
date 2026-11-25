@@ -39,6 +39,7 @@ public final class ClanManager {
             return;
         }
         switch (args[0].toLowerCase(Locale.ROOT)) {
+            case "gui" -> openGui(player);
             case "create" -> create(player, args);
             case "invite" -> invite(player, args);
             case "accept" -> accept(player);
@@ -97,6 +98,26 @@ public final class ClanManager {
         String path = "clans." + key + ".maceWins";
         data.set(path, data.getInt(path) + 1);
         save();
+    }
+
+    private void openGui(Player player) {
+        String key = clanKey(player.getUniqueId());
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        if (key == null) {
+            options.add(new PopupMenuManager.MenuOption("Clan erstellen", "Erstelle einen Clan mit /clan create <Name>", () -> player.sendMessage(color("&eNutze: /clan create <Name>"))));
+            options.add(new PopupMenuManager.MenuOption("Einladung annehmen", "Nimmt deine offene Clan-Einladung an", () -> accept(player)));
+        } else {
+            options.add(new PopupMenuManager.MenuOption("Clan-Informationen", "Zeigt Leitung, Mitglieder und Siege", () -> info(player)));
+            options.add(new PopupMenuManager.MenuOption("Mitglieder einladen", "Einladung mit /clan invite <Spieler>", () -> player.sendMessage(color("&eNutze: /clan invite <Spieler>"))));
+            if (data.getString("clans." + key + ".leader", "").equals(player.getUniqueId().toString())) {
+                options.add(new PopupMenuManager.MenuOption("Clan auflösen", "Löst deinen Clan auf", () -> disband(player)));
+            } else {
+                options.add(new PopupMenuManager.MenuOption("Clan verlassen", "Verlasse deinen aktuellen Clan", () -> leave(player)));
+            }
+            options.add(new PopupMenuManager.MenuOption("Clan-Chat Hilfe", "Nachrichten mit /clan chat <Nachricht>", () -> player.sendMessage(color("&eNutze: /clan chat <Nachricht>"))));
+        }
+        options.add(new PopupMenuManager.MenuOption("Clan-Rangliste", "Zeigt die besten Clans nach Mace-Siegen", () -> top(player)));
+        plugin.popupMenuManager().showMenu(player, "AllInOneMC – Clans", key == null ? "Du bist noch in keinem Clan." : "Clan: " + displayName(key), options);
     }
 
     private void create(Player player, String[] args) {
