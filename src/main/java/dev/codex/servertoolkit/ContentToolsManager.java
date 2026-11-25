@@ -10,7 +10,6 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +30,6 @@ final class ContentToolsManager implements Listener {
     );
 
     private final ServerToolkit plugin;
-    private final Map<UUID, PendingRequest> pending = new HashMap<>();
     private final Map<UUID, LagSession> lagSessions = new HashMap<>();
     private final Map<UUID, Integer> crashTasks = new HashMap<>();
     private final Map<UUID, NickSession> nickSessions = new HashMap<>();
@@ -43,11 +41,7 @@ final class ContentToolsManager implements Listener {
 
     void handleLag(CommandSender sender, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage("§eNutzung: /lag <Spieler> [Sekunden] | /lag accept|decline | /lag stop <Spieler>");
-            return;
-        }
-        if (sender instanceof Player player && (args[0].equalsIgnoreCase("accept") || args[0].equalsIgnoreCase("decline"))) {
-            respond(player, "lag", args[0].equalsIgnoreCase("accept"));
+            sender.sendMessage("§eNutzung: /lag <Spieler> [Sekunden] | /lag stop <Spieler>");
             return;
         }
         if (args[0].equalsIgnoreCase("stop")) {
@@ -62,23 +56,21 @@ final class ContentToolsManager implements Listener {
         if (!sender.hasPermission("servertoolkit.lag")) { sender.sendMessage("§cKeine Berechtigung."); return; }
         Player target = Bukkit.getPlayerExact(args[0]);
         if (target == null) { sender.sendMessage("§cSpieler nicht online."); return; }
-        if (target.equals(sender)) { sender.sendMessage("§cNutze /lag accept nicht auf dich selbst."); return; }
+        if (target.equals(sender)) { sender.sendMessage("§cDu kannst dich nicht selbst pranken."); return; }
+        if (!isPrankEnabled(target)) { sender.sendMessage("§c" + target.getName() + " hat Pranks nicht aktiviert. (Standard: off)"); return; }
         int seconds = 8;
         if (args.length > 1) {
             try { seconds = Integer.parseInt(args[1]); }
             catch (NumberFormatException ex) { sender.sendMessage("§cSekunden müssen eine Zahl sein."); return; }
         }
         seconds = Math.max(3, Math.min(30, seconds));
-        request(sender, target, "lag", seconds);
+        startLag(target, seconds);
+        sender.sendMessage("§aLag-Prank für " + target.getName() + " gestartet.");
     }
 
     void handleCrash(CommandSender sender, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage("§eNutzung: /crash <Spieler> | /crash accept|decline | /crash stop <Spieler>");
-            return;
-        }
-        if (sender instanceof Player player && (args[0].equalsIgnoreCase("accept") || args[0].equalsIgnoreCase("decline"))) {
-            respond(player, "crash", args[0].equalsIgnoreCase("accept"));
+            sender.sendMessage("§eNutzung: /crash <Spieler> | /crash stop <Spieler>");
             return;
         }
         if (args[0].equalsIgnoreCase("stop")) {
@@ -95,43 +87,10 @@ final class ContentToolsManager implements Listener {
         if (!sender.hasPermission("servertoolkit.crash")) { sender.sendMessage("§cKeine Berechtigung."); return; }
         Player target = Bukkit.getPlayerExact(args[0]);
         if (target == null) { sender.sendMessage("§cSpieler nicht online."); return; }
-        if (target.equals(sender)) { sender.sendMessage("§cDu kannst keine Crash-Anfrage an dich selbst senden."); return; }
-        request(sender, target, "crash", 0);
-    }
-
-    private void request(CommandSender sender, Player target, String type, int seconds) {
-        pending.put(target.getUniqueId(), new PendingRequest(type, sender.getName(), seconds));
-        String label = type.equals("lag") ? "Lag-Simulation (" + seconds + " Sekunden)" : "Crash-Simulation (Disconnect-Bildschirm)";
-        target.sendMessage("§6§lCONTENT-ANFRAGE");
-        target.sendMessage("§e" + sender.getName() + " §7möchte eine §f" + label + " §7starten.");
-        target.sendMessage("§a/" + type + " accept §7zum Zustimmen oder §c/" + type + " decline §7zum Ablehnen. §8(30 Sekunden gültig)");
-        sender.sendMessage("§aAnfrage an " + target.getName() + " gesendet. Es passiert erst etwas nach Zustimmung.");
-        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            PendingRequest current = pending.get(target.getUniqueId());
-            if (current != null && current.type.equals(type) && current.requester.equals(sender.getName())) {
-                pending.remove(target.getUniqueId());
-                if (target.isOnline()) target.sendMessage("§7Die Content-Anfrage ist abgelaufen.");
-                sender.sendMessage("§7Die Anfrage an " + target.getName() + " ist abgelaufen.");
-            }
-        }, 20L * 30);
-    }
-
-    private void respond(Player target, String type, boolean accepted) {
-        PendingRequest request = pending.get(target.getUniqueId());
-        if (request == null || !request.type.equals(type)) {
-            target.sendMessage("§cDu hast keine offene " + type + "-Anfrage.");
-            return;
-        }
-        pending.remove(target.getUniqueId());
-        Player requester = Bukkit.getPlayerExact(request.requester);
-        if (!accepted) {
-            target.sendMessage("§7Anfrage abgelehnt.");
-            if (requester != null) requester.sendMessage("§c" + target.getName() + " hat die Anfrage abgelehnt.");
-            return;
-        }
-        if (requester != null) requester.sendMessage("§a" + target.getName() + " hat zugestimmt.");
-        if (type.equals("lag")) startLag(target, request.seconds);
-        else startCrash(target);
+        if (target.equals(sender)) { sender.sendMessage("§cDu kannst dich nicht selbst pranken."); return; }
+        if (!isPrankEnabled(target)) { sender.sendMessage("§c" + target.getName() + " hat Pranks nicht aktiviert. (Standard: off)"); return; }
+        startCrash(target);
+        sender.sendMessage("§aCrash-Simulation für " + target.getName() + " gestartet.");
     }
 
     private void startLag(Player player, int seconds) {
@@ -171,6 +130,40 @@ final class ContentToolsManager implements Listener {
             if (player.isOnline()) player.kickPlayer("§cMinecraft wurde getrennt\n§7Dies war eine vereinbarte Content-Crash-Simulation.");
         }, 100L).getTaskId();
         crashTasks.put(player.getUniqueId(), task);
+    }
+
+    void handlePrank(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("§cNur Spieler können ihren Prank-Status ändern.");
+            return;
+        }
+        if (args.length != 1 || !(args[0].equalsIgnoreCase("on") || args[0].equalsIgnoreCase("off") || args[0].equalsIgnoreCase("status"))) {
+            player.sendMessage("§eNutzung: /prank <on|off|status>");
+            return;
+        }
+        boolean enabled = isPrankEnabled(player);
+        if (args[0].equalsIgnoreCase("status")) {
+            player.sendMessage("§ePranks: " + (enabled ? "§aON" : "§cOFF"));
+            return;
+        }
+        enabled = args[0].equalsIgnoreCase("on");
+        plugin.getConfig().set("prank-enabled." + player.getUniqueId(), enabled);
+        plugin.saveConfig();
+        player.sendMessage(enabled ? "§aPranks aktiviert. Admins dürfen jetzt Lag- und Crash-Simulationen starten." : "§cPranks deaktiviert. Lag- und Crash-Simulationen sind für dich gesperrt.");
+        if (!enabled) {
+            stopLag(player, "§cDeine laufende Lag-Simulation wurde wegen /prank off beendet.");
+            Integer task = crashTasks.remove(player.getUniqueId());
+            if (task != null) {
+                Bukkit.getScheduler().cancelTask(task);
+                player.removePotionEffect(PotionEffectType.BLINDNESS);
+                player.removePotionEffect(PotionEffectType.NAUSEA);
+                player.sendMessage("§cDeine laufende Crash-Simulation wurde beendet.");
+            }
+        }
+    }
+
+    private boolean isPrankEnabled(Player player) {
+        return plugin.getConfig().getBoolean("prank-enabled." + player.getUniqueId(), false);
     }
 
     void handleNick(CommandSender sender, String[] args) {
@@ -240,7 +233,6 @@ final class ContentToolsManager implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         UUID id = event.getPlayer().getUniqueId();
-        pending.remove(id);
         LagSession lag = lagSessions.remove(id);
         if (lag != null) Bukkit.getScheduler().cancelTask(lag.task);
         Integer crash = crashTasks.remove(id);
@@ -248,7 +240,6 @@ final class ContentToolsManager implements Listener {
         nickSessions.remove(id);
     }
 
-    private record PendingRequest(String type, String requester, int seconds) {}
     private record LagSession(int task, Map<PotionEffectType, PotionEffect> previous) {}
     private record NickSession(PlayerProfile originalProfile, String nick) {}
 }
