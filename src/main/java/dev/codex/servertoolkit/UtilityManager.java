@@ -88,7 +88,7 @@ public final class UtilityManager implements CommandExecutor, Listener {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        String name = command.getName().toLowerCase(Locale.ROOT);
+        String name = label.toLowerCase(Locale.ROOT);
         if (!(sender instanceof Player player)) {
             sender.sendMessage("Dieser Befehl ist nur im Spiel verfügbar.");
             return true;
