@@ -96,8 +96,12 @@ commands:
     description: Öffnet das Kit-Menü oder verwaltet Kits.
     usage: /kit [claim|create|delete|cooldown]
   ban:
-    description: Bannt einen Spieler mit einem Ban-Preset.
-    usage: /ban <Spieler> <Preset>
+    description: Permanenter Vanilla-Spieler-Ban mit Grund.
+    usage: /ban <Spieler> [Grund]
+    permission: servertoolkit.ban
+  punish:
+    description: Bestraft einen Spieler mit einem konfigurierten Straf-Preset.
+    usage: /punish <Spieler> <Preset>
     permission: servertoolkit.ban
   banrank:
     description: Öffnet die Rang-zu-Rang-Ban-Rechte-GUI.
