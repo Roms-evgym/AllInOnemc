@@ -95,6 +95,13 @@ commands:
   kit:
     description: Öffnet das Kit-Menü oder verwaltet Kits.
     usage: /kit [claim|create|delete|cooldown]
+  code:
+    description: Löst einen Belohnungscode ein.
+    usage: /code <Code>
+  setcode:
+    description: Erstellt einen Rang- oder Geld-Belohnungscode.
+    usage: /setcode <Code> rank <Rang>|money <Betrag>
+    permission: servertoolkit.code.create
   ban:
     description: Permanenter Vanilla-Spieler-Ban mit Grund.
     usage: /ban <Spieler> [Grund]
@@ -185,6 +192,9 @@ permissions:
     default: op
   servertoolkit.kit.manage:
     description: Darf Kits erstellen, löschen und Cooldowns einstellen.
+    default: op
+  servertoolkit.code.create:
+    description: Darf Belohnungscodes erstellen.
     default: op
   servertoolkit.ban:
     description: Darf Spieler mit Ban-Presets bannen.
