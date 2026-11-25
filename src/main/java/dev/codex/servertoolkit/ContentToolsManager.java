@@ -163,7 +163,7 @@ final class ContentToolsManager implements Listener {
     }
 
     private boolean isPrankEnabled(Player player) {
-        return plugin.getConfig().getBoolean("prank-enabled." + player.getUniqueId(), false);
+        return plugin.getConfig().getBoolean("prank-enabled." + player.getUniqueId(), plugin.getConfig().getBoolean("prank.default-enabled", true));
     }
 
     void handleNick(CommandSender sender, String[] args) {
