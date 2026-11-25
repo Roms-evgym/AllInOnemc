@@ -166,6 +166,93 @@ commands:
     usage: /fakore <erz> [anzahl]
     permission: servertoolkit.admin
 permissions:
+  servertoolkit.command.spawn:
+    description: Darf den Befehl /spawn verwenden.
+    default: true
+  servertoolkit.command.sethome:
+    description: Darf den Befehl /sethome verwenden.
+    default: true
+  servertoolkit.command.home:
+    description: Darf den Befehl /home verwenden.
+    default: true
+  servertoolkit.command.homes:
+    description: Darf den Befehl /homes verwenden.
+    default: true
+  servertoolkit.command.delhome:
+    description: Darf den Befehl /delhome verwenden.
+    default: true
+  servertoolkit.command.rtp:
+    description: Darf den Befehl /rtp verwenden.
+    default: true
+  servertoolkit.command.clan:
+    description: Darf den Befehl /clan verwenden.
+    default: true
+  servertoolkit.command.mace:
+    description: Darf den Befehl /mace verwenden.
+    default: true
+  servertoolkit.command.echest:
+    description: Darf den Befehl /echest verwenden.
+    default: true
+  servertoolkit.command.trash:
+    description: Darf den Befehl /trash verwenden.
+    default: true
+  servertoolkit.command.voice:
+    description: Darf den Befehl /voice verwenden.
+    default: true
+  servertoolkit.command.ah:
+    description: Darf den Befehl /ah verwenden.
+    default: true
+  servertoolkit.command.order:
+    description: Darf den Befehl /order verwenden.
+    default: true
+  servertoolkit.command.orders:
+    description: Darf den Befehl /orders verwenden.
+    default: true
+  servertoolkit.command.kit:
+    description: Darf den Befehl /kit verwenden.
+    default: true
+  servertoolkit.command.hub:
+    description: Darf den Befehl /hub verwenden.
+    default: true
+  servertoolkit.command.lobby:
+    description: Darf den Befehl /lobby verwenden.
+    default: true
+  servertoolkit.command.servers:
+    description: Darf den Befehl /servers verwenden.
+    default: true
+  servertoolkit.command.money:
+    description: Darf den Befehl /money verwenden.
+    default: true
+  servertoolkit.command.pay:
+    description: Darf den Befehl /pay verwenden.
+    default: true
+  servertoolkit.command.sell:
+    description: Darf den Befehl /sell verwenden.
+    default: true
+  servertoolkit.command.shop:
+    description: Darf den Befehl /shop verwenden.
+    default: true
+  servertoolkit.command.tpa:
+    description: Darf den Befehl /tpa verwenden.
+    default: true
+  servertoolkit.command.tpaccept:
+    description: Darf den Befehl /tpaccept verwenden.
+    default: true
+  servertoolkit.command.tpdeny:
+    description: Darf den Befehl /tpdeny verwenden.
+    default: true
+  servertoolkit.command.code:
+    description: Darf den Befehl /code verwenden.
+    default: true
+  servertoolkit.command.bounty:
+    description: Darf den Befehl /bounty verwenden.
+    default: true
+  servertoolkit.command.playtime:
+    description: Darf den Befehl /playtime verwenden.
+    default: true
+  servertoolkit.command.sit:
+    description: Darf den Befehl /sit verwenden.
+    default: true
   servertoolkit.menu.open:
     description: Darf das AllInOne-Hauptmenü öffnen.
     default: true
