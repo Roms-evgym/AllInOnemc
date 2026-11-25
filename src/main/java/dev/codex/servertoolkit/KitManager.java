@@ -115,38 +115,25 @@ public final class KitManager implements Listener {
 
     private void open(Player player) {
         ConfigurationSection kits = data.getConfigurationSection("kits");
-        if (kits == null || kits.getKeys(false).isEmpty()) { player.sendMessage(color("&7Es gibt noch keine Kits.")); return; }
+        if (kits == null || kits.getKeys(false).isEmpty()) {
+            player.sendMessage(color("&7Es gibt noch keine Kits."));
+            return;
+        }
         List<String> ids = new ArrayList<>(kits.getKeys(false));
-        KitMenu holder = new KitMenu(ids, 0);
-        Inventory inv = Bukkit.createInventory(holder, 54, GuiStyle.title("Kits"));
-        holder.inventory = inv;
-        int pages = (ids.size() + 27) / 28;
-        List<Integer> slots = kitSlots();
-        int start = holder.page * slots.size();
-        for (int index = start; index < Math.min(ids.size(), start + slots.size()); index++) {
-            int slot = slots.get(index - start);
-            String id = ids.get(index), path = "kits." + id;
-            ItemStack[] stored = readItems(path + ".contents", 36);
-            ItemStack icon = null;
-            for (ItemStack item : stored) if (item != null && item.getType() != Material.AIR) { icon = item.clone(); break; }
-            if (icon == null) icon = new ItemStack(Material.CHEST);
-            ItemMeta meta = icon.getItemMeta();
-            meta.setDisplayName(color(GuiStyle.accent() + id));
+        ids.sort(String.CASE_INSENSITIVE_ORDER);
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        for (String id : ids) {
+            String path = "kits." + id;
             long seconds = data.getLong(path + ".cooldown-seconds", 86400);
             long readyAt = data.getLong("claims." + player.getUniqueId() + "." + id, 0) + seconds * 1000L;
-            List<String> lore = new ArrayList<>();
-            lore.add(color("&7Cooldown: &f" + (seconds == 0 ? "Keiner" : formatTime(seconds))));
-            lore.add(color(readyAt > System.currentTimeMillis() ? "&cVerfügbar in " + formatTime((readyAt-System.currentTimeMillis()+999)/1000) : "&aKlicken zum Abholen"));
-            meta.setLore(lore); icon.setItemMeta(meta); inv.setItem(slot, icon);
-            holder.kitSlots.put(slot, id);
+            String state = readyAt > System.currentTimeMillis()
+                    ? "Verfügbar in " + formatTime((readyAt - System.currentTimeMillis() + 999) / 1000)
+                    : "Jetzt abholbar";
+            options.add(new PopupMenuManager.MenuOption(id,
+                    "Cooldown: " + (seconds == 0 ? "Keiner" : formatTime(seconds)) + " • " + state,
+                    () -> claim(player, id)));
         }
-        if (pages > 1) {
-            if (holder.page > 0) inv.setItem(45, menuItem(Material.ARROW, GuiStyle.accent() + "« Zurück", "&7Seite " + holder.page + "/" + pages));
-            inv.setItem(49, menuItem(Material.PAPER, GuiStyle.accent() + "Seite " + (holder.page + 1) + "/" + pages, "&7Kits gesamt: " + ids.size()));
-            if (holder.page + 1 < pages) inv.setItem(53, menuItem(Material.ARROW, GuiStyle.accent() + "Weiter »", "&7Seite " + (holder.page + 2) + "/" + pages));
-        }
-        GuiStyle.frame(inv);
-        player.openInventory(inv);
+        plugin.popupMenuManager().showMenu(player, "AllInOneMC – Kits", "Wähle ein Kit zum Abholen.", options);
     }
 
     @EventHandler
