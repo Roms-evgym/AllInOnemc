@@ -236,18 +236,26 @@ public final class MarketManager implements CommandExecutor, Listener {
 
     private void showOrders(Player player) {
         ConfigurationSection orders = data.getConfigurationSection("orders");
-        player.sendMessage(color("&6&m-----&r &eOffene Aufträge &6&m-----"));
-        if (orders == null || orders.getKeys(false).isEmpty()) {
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        if (orders != null) {
+            List<String> ids = new ArrayList<>(orders.getKeys(false));
+            ids.sort((left, right) -> Integer.compare(parseAuctionId(right), parseAuctionId(left)));
+            for (String id : ids) {
+                String path = "orders." + id;
+                String owner = data.getString(path + ".ownerName", "Spieler");
+                String material = data.getString(path + ".material", "UNKNOWN");
+                int amount = data.getInt(path + ".amount");
+                double reward = data.getDouble(path + ".reward");
+                options.add(new PopupMenuManager.MenuOption("#" + id + " • " + amount + "x " + material,
+                        "Von " + owner + " | Belohnung: " + reward + " Coins",
+                        () -> fillOrder(player, new String[]{"fill", id})));
+            }
+        }
+        if (options.isEmpty()) {
             player.sendMessage(color("&7Keine offenen Aufträge. Erstelle einen mit &f/order create"));
             return;
         }
-        int shown = 0;
-        for (String id : orders.getKeys(false)) {
-            String path = "orders." + id;
-            player.sendMessage(color("&e#" + id + " &f" + data.getInt(path + ".amount") + "x " + data.getString(path + ".material")
-                    + " &7von &f" + data.getString(path + ".ownerName") + " &7- &a" + data.getDouble(path + ".reward") + " Coins &8(/order fill " + id + ")"));
-            if (++shown >= 10) break;
-        }
+        plugin.popupMenuManager().showMenu(player, "Spieler-Aufträge", "Wähle einen Auftrag zum Erfüllen.", options);
     }
 
     private void fillOrder(Player player, String[] args) {
