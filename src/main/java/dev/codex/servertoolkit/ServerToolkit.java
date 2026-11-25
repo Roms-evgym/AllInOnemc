@@ -217,8 +217,31 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             public void execute(CommandSourceStack source, String[] args) {
                 executor.accept(source.getSender(), args);
             }
+
+            @Override
+            public String permission() {
+                return commandPermission(name);
+            }
         };
         registerCommand(name, "AllInOneMC command", aliases, basic);
+    }
+
+    private String commandPermission(String name) {
+        return switch (name) {
+            case "menu" -> "servertoolkit.menu.open";
+            case "setspawn", "fakebase", "fakore" -> "servertoolkit.admin";
+            case "clanduel" -> "servertoolkit.clanduel";
+            case "fly" -> "servertoolkit.fly";
+            case "god" -> "servertoolkit.god";
+            case "invsee", "ecsee" -> "servertoolkit.staff";
+            case "rank", "ranks" -> "servertoolkit.rank.manage";
+            case "setcode" -> "servertoolkit.code.create";
+            case "ban", "punish" -> "servertoolkit.ban";
+            case "banpreset", "banrank", "banhammer" -> "servertoolkit.ban.manage";
+            case "vanish" -> "servertoolkit.vanish";
+            case "eco" -> "servertoolkit.eco.admin";
+            default -> "servertoolkit.command." + name;
+        };
     }
 
     UtilityManager utilityManager() { return utilityManager; }
