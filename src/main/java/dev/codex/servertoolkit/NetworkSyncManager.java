@@ -77,9 +77,11 @@ public final class NetworkSyncManager implements Listener, PluginMessageListener
             UUID uuid = UUID.fromString(in.readUTF());
             String rank = in.readUTF();
             BigDecimal balance = new BigDecimal(in.readUTF());
-            if (!"SYNC".equals(operation) || !player.getUniqueId().equals(uuid)
-                    || !rank.matches("[a-zA-Z0-9_-]{1,32}") || balance.signum() < 0
-                    || balance.scale() > 2 || balance.precision() > 18 || in.available() != 0) return;
+            // Proxy-to-backend packets may be carried by any player connected to the
+            // target server; the UUID in the trusted proxy payload identifies the real owner.
+            if (!"SYNC".equals(operation) || !rank.matches("[a-zA-Z0-9_-]{1,32}")
+                    || balance.signum() < 0 || balance.scale() > 2
+                    || balance.precision() > 18 || in.available() != 0) return;
 
             plugin.utilityManager().applySyncedRank(uuid, rank);
             plugin.economyManager().applySyncedBalance(uuid, balance);
