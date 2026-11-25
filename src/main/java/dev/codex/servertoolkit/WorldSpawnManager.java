@@ -28,7 +28,7 @@ public final class WorldSpawnManager implements CommandExecutor {
             player.sendMessage(color("&cDafür hast du keine Rechte."));
             return true;
         }
-        switch (command.getName().toLowerCase(Locale.ROOT)) {
+        switch (label.toLowerCase(Locale.ROOT)) {
             case "fakebase" -> placeFakeBase(player);
             case "fakore" -> placeOreVein(player, args);
             default -> { return false; }
