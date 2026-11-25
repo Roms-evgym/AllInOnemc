@@ -501,9 +501,9 @@ public final class UtilityManager implements CommandExecutor, Listener {
     private void openVoiceMenu(Player player) {
         String accent = plugin.getConfig().getString("voice-menu.accent", "&b");
         List<PopupMenuManager.MenuOption> options = List.of(
-                new PopupMenuManager.MenuOption("Voice-GUI öffnen", "Drücke im Spiel V."),
-                new PopupMenuManager.MenuOption("Mikrofon & Einstellungen", "In der Voice-GUI das Zahnrad wählen."),
-                new PopupMenuManager.MenuOption("Gruppe erstellen", "Voice-GUI mit V öffnen und Gruppe wählen.")
+                new PopupMenuManager.MenuOption("Voice-GUI öffnen", "Drücke im Spiel V.", () -> player.sendMessage(color("&7Öffne die Voice-GUI mit &fV&7."))),
+                new PopupMenuManager.MenuOption("Mikrofon & Einstellungen", "In der Voice-GUI das Zahnrad wählen.", () -> player.sendMessage(color("&7Öffne mit &fV &7die Einstellungen."))),
+                new PopupMenuManager.MenuOption("Gruppe erstellen", "Voice-GUI mit V öffnen und Gruppe wählen.", () -> player.sendMessage(color("&7Öffne mit &fV &7die Gruppen-Auswahl.")))
         );
         plugin.popupMenuManager().showMenu(player, "Simple Voice Chat", "Voice-Chat-Hilfe (" + ChatColor.stripColor(color(accent)) + ")", options);
     }
