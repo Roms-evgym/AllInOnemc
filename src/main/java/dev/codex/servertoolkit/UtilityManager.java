@@ -542,6 +542,10 @@ public final class UtilityManager implements CommandExecutor, Listener {
     private String rankPrefix(String id) { return color(plugin.getConfig().getString("ranks." + id + ".prefix", "&7")); }
     private void saveRanks() { try { rankData.save(rankFile); } catch (IOException e) { plugin.getLogger().severe("Konnte ranks.yml nicht speichern: " + e.getMessage()); } }
 
+    public void refreshPlayerDisplay(Player player) {
+        refreshPlayer(player);
+    }
+
     private void refreshPlayer(Player player) {
         if (player == null) return;
         String id = getRankId(player);
