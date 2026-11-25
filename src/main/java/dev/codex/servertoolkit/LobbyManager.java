@@ -11,6 +11,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -139,6 +141,19 @@ public final class LobbyManager implements Listener {
         if (!(event.getWhoClicked() instanceof Player player) || event.getClickedInventory() != holder.inventory) return;
         connectToServer(player, holder.targets.get(event.getSlot()));
         player.closeInventory();
+    }
+
+    /** Players may freely explore the lobby, but the world itself is protected. */
+    @EventHandler
+    public void onLobbyBlockBreak(BlockBreakEvent event) {
+        if (!plugin.isLobbyMode()) return;
+        event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onLobbyBlockPlace(BlockPlaceEvent event) {
+        if (!plugin.isLobbyMode()) return;
+        event.setCancelled(true);
     }
 
     @EventHandler
