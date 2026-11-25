@@ -44,6 +44,43 @@ public final class PopupMenuManager {
         openJavaMenu(player);
     }
 
+    public void showMenu(Player player, String title, String description, List<MenuOption> options) {
+        if (plugin.getServer().getPluginManager().isPluginEnabled("floodgate")) {
+            try {
+                FloodgateApi api = FloodgateApi.getInstance();
+                if (api != null && api.isFloodgatePlayer(player.getUniqueId())) {
+                    SimpleForm.Builder form = SimpleForm.builder().title(title).content(description);
+                    for (MenuOption option : options) form.button(option.label());
+                    SimpleForm built = form.validResultHandler(response -> {
+                        int selected = response.clickedButtonId();
+                        if (selected >= 0 && selected < options.size()) options.get(selected).action().run();
+                    }).build();
+                    api.sendForm(player.getUniqueId(), built);
+                    return;
+                }
+            } catch (RuntimeException exception) {
+                plugin.getLogger().warning("Floodgate-Formular konnte nicht geöffnet werden: " + exception.getMessage());
+            }
+        }
+
+        List<ActionButton> actions = new ArrayList<>();
+        for (MenuOption option : options) {
+            actions.add(ActionButton.create(Component.text(option.label()),
+                    Component.text(option.description()), 180,
+                    DialogAction.customClick((view, audience) -> {
+                        if (audience instanceof Player target && target.getUniqueId().equals(player.getUniqueId())) {
+                            option.action().run();
+                        }
+                    }, ClickCallback.Options.builder().uses(1).build())));
+        }
+        Dialog dialog = Dialog.create(builder -> builder.empty()
+                .base(DialogBase.builder(Component.text(title)).build())
+                .type(DialogType.multiAction(actions, null, 2)));
+        player.showDialog(dialog);
+    }
+
+    public record MenuOption(String label, String description, Runnable action) {}
+
     private void openBedrockMenu(FloodgateApi api, Player player) {
         SimpleForm form = SimpleForm.builder()
                 .title("§l§6AllInOneMC")
