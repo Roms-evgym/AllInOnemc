@@ -48,6 +48,10 @@ public final class PopupMenuManager {
         addMainOption(player, options, "Voice-Chat", "Voice-Chat-Hilfe öffnen", "voice", "voice");
         addMainOption(player, options, "Kopfgeld", "Kopfgeld anzeigen", "bounty", "bounty");
         addMainOption(player, options, "Spielzeit", "Spielzeit anzeigen", "playtime", "playtime");
+        if (options.isEmpty()) {
+            player.sendMessage("§cFür dich sind keine Menüpunkte freigeschaltet.");
+            return;
+        }
         showMenu(player, "AllInOneMC – Hauptmenü", "Wähle einen Bereich aus.", options);
     }
 
