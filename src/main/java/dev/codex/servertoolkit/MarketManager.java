@@ -98,33 +98,33 @@ public final class MarketManager implements CommandExecutor, Listener {
     }
 
     private void openAuctionHouse(Player player) {
-        AuctionHolder holder = new AuctionHolder();
-        Inventory inventory = Bukkit.createInventory(holder, 54, GuiStyle.title("Auktionshaus"));
-        holder.inventory = inventory;
         ConfigurationSection auctions = data.getConfigurationSection("auctions");
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
         if (auctions != null) {
-            int slot = 0;
-            for (String id : auctions.getKeys(false)) {
-                if (slot >= 45) break;
+            List<String> ids = new ArrayList<>(auctions.getKeys(false));
+            ids.sort((left, right) -> Integer.compare(parseAuctionId(right), parseAuctionId(left)));
+            for (String id : ids) {
                 ItemStack item = readItem("auctions." + id + ".item");
                 if (item == null) continue;
-                ItemStack display = item.clone();
-                ItemMeta meta = display.getItemMeta();
-                if (meta != null) {
-                    List<String> lore = meta.hasLore() && meta.getLore() != null ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
-                    lore.add(color("&7Verkäufer: &f" + data.getString("auctions." + id + ".sellerName", "Unbekannt")));
-                    lore.add(color("&7Preis: &e" + data.getDouble("auctions." + id + ".price") + " Coins"));
-                    lore.add(color("&8Klicke zum Kaufen | ID #" + id));
-                    meta.setLore(lore);
-                    display.setItemMeta(meta);
-                }
-                inventory.setItem(slot, display);
-                holder.listings.put(slot, id);
-                slot++;
+                String seller = data.getString("auctions." + id + ".sellerName", "Unbekannt");
+                double price = data.getDouble("auctions." + id + ".price");
+                String itemName = item.hasItemMeta() && item.getItemMeta().hasDisplayName()
+                        ? ChatColor.stripColor(item.getItemMeta().getDisplayName()) : item.getType().name();
+                options.add(new PopupMenuManager.MenuOption("#" + id + " • " + itemName,
+                        "Verkäufer: " + seller + " | Preis: " + price + " Coins | Menge: " + item.getAmount(),
+                        () -> buyListing(player, id)));
             }
         }
-        GuiStyle.frame(inventory);
-        player.openInventory(inventory);
+        if (options.isEmpty()) {
+            player.sendMessage(color("&7Es gibt derzeit keine Auktionen."));
+            return;
+        }
+        plugin.popupMenuManager().showMenu(player, "AllInOneMC – Auktionshaus",
+                "Wähle ein Angebot zum Kaufen.", options);
+    }
+
+    private int parseAuctionId(String value) {
+        try { return Integer.parseInt(value); } catch (NumberFormatException ignored) { return -1; }
     }
 
     @EventHandler
