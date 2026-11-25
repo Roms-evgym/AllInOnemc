@@ -19,6 +19,8 @@ import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import io.papermc.paper.command.brigadier.BasicCommand;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.connection.PlayerGameConnection;
 import io.papermc.paper.event.player.PlayerCustomClickEvent;
 import java.util.HashMap;
@@ -74,12 +76,14 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         WorldSpawnManager worldSpawnManager = new WorldSpawnManager();
         for (String name : new String[]{"spawn", "setspawn", "sethome", "home", "homes", "delhome", "rtp", "clan", "clanduel", "mace",
                 "fly", "god", "invsee", "echest", "ecsee", "trash", "ranks", "rank", "voice", "ah", "order", "orders", "kit",
-                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "servers", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode", "menu", "bounty", "playtime"}) {
-            getCommand(name).setExecutor(this);
+                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "servers", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode", "menu", "bounty", "playtime", "sit"}) {
+            registerCommandBridge(name, List.of(), (sender, args) -> {
+                if (name.equals("sit")) sitManager.onCommand(sender, null, name, args);
+                else if (name.equals("fakebase") || name.equals("fakore")) worldSpawnManager.onCommand(sender, null, name, args);
+                else onCommand(sender, null, name, args);
+            });
         }
-        getCommand("sit").setExecutor(sitManager);
-        getCommand("fakebase").setExecutor(worldSpawnManager);
-        getCommand("fakore").setExecutor(worldSpawnManager);
+        registerCommandBridge("servers", List.of("servermenu"), (sender, args) -> onCommand(sender, null, "servers", args));
         getLogger().info("ServerToolkit gestartet im " + (lobbyMode ? "LOBBY" : "SURVIVAL") + "-Modus.");
     }
 
@@ -125,7 +129,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        switch (command.getName().toLowerCase(java.util.Locale.ROOT)) {
+        switch (label.toLowerCase(java.util.Locale.ROOT)) {
             case "menu" -> { popupMenuManager.openMainMenu(sender); return true; }
             case "code" -> { redeemCodeManager.handleRedeem(sender, args); return true; }
             case "setcode" -> { redeemCodeManager.handleCreate(sender, args); return true; }
@@ -145,7 +149,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             sender.sendMessage("Dieser Befehl ist nur im Spiel verfügbar.");
             return true;
         }
-        switch (command.getName().toLowerCase()) {
+        switch (label.toLowerCase(java.util.Locale.ROOT)) {
             case "spawn" -> teleportSpawn(player);
             case "setspawn" -> {
                 if (!player.hasPermission("servertoolkit.admin")) {
@@ -199,6 +203,17 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             default -> { return false; }
         }
         return true;
+    }
+
+    private void registerCommandBridge(String name, java.util.Collection<String> aliases,
+                                       java.util.function.BiConsumer<CommandSender, String[]> executor) {
+        BasicCommand basic = new BasicCommand() {
+            @Override
+            public void execute(CommandSourceStack source, String[] args) {
+                executor.accept(source.getSender(), args);
+            }
+        };
+        registerCommand(name, "AllInOneMC command", aliases, basic);
     }
 
     UtilityManager utilityManager() { return utilityManager; }
