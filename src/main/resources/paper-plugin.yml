@@ -1,0 +1,6 @@
+name: ServerToolkit
+version: '1.14.2'
+main: dev.codex.servertoolkit.ServerToolkit
+bootstrapper: dev.codex.servertoolkit.ServerToolkitBootstrap
+api-version: '26.3'
+description: AllInOneMC server features and native Minecraft dialogs
