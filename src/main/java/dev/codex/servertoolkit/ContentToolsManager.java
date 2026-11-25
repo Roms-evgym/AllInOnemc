@@ -163,7 +163,7 @@ final class ContentToolsManager implements Listener {
     }
 
     private void startCrash(Player player) {
-        player.sendMessage("§c§lCRASH-SIMULATION §7– Disconnect in 5 Sekunden. §8/ crash stop durch Admin zum Abbrechen.");
+        player.sendMessage("§c§lCRASH-SIMULATION §7– Disconnect in 5 Sekunden. §8/crash stop durch Admin zum Abbrechen.");
         player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 100, 0, false, false, true));
         player.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 100, 0, false, false, true));
         int task = Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -175,7 +175,12 @@ final class ContentToolsManager implements Listener {
 
     void handleNick(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) { sender.sendMessage("§cNur im Spiel verfügbar."); return; }
-        if (args.length == 0 || args[0].equalsIgnoreCase("off")) {
+        if (args.length == 0) {
+            if (!player.hasPermission("servertoolkit.nick")) { sender.sendMessage("§cKeine Berechtigung."); return; }
+            applyNick(player, player);
+            return;
+        }
+        if (args[0].equalsIgnoreCase("off")) {
             if (!player.hasPermission("servertoolkit.nick")) { sender.sendMessage("§cKeine Berechtigung."); return; }
             restoreNick(player);
             return;
