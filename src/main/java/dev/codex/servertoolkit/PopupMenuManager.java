@@ -28,20 +28,37 @@ public final class PopupMenuManager {
             sender.sendMessage("Dieses Menü kann nur ein Spieler öffnen.");
             return;
         }
-
-        if (plugin.getServer().getPluginManager().isPluginEnabled("floodgate")) {
-            try {
-                FloodgateApi api = FloodgateApi.getInstance();
-                if (api != null && api.isFloodgatePlayer(player.getUniqueId())) {
-                    openBedrockMenu(api, player);
-                    return;
-                }
-            } catch (RuntimeException exception) {
-                plugin.getLogger().warning("Floodgate-Formular konnte nicht geöffnet werden: " + exception.getMessage());
-            }
+        if (!player.hasPermission("servertoolkit.menu.open")) {
+            player.sendMessage("§cDu darfst das Menü nicht öffnen.");
+            return;
         }
+        List<MenuOption> options = new ArrayList<>();
+        addMainOption(player, options, "Spawn", "Zum Server-Spawn", "spawn", "spawn");
+        addMainOption(player, options, "Zufalls-Teleport", "RTP-Menü öffnen", "rtp", "rtp");
+        addMainOption(player, options, "Shop", "Server-Shop öffnen", "shop", "shop");
+        addMainOption(player, options, "Verkaufen", "Verkaufsmenü öffnen", "sell hand", "sell");
+        addMainOption(player, options, "Clans", "Clan-Menü öffnen", "clan", "clan");
+        addMainOption(player, options, "Kits", "Kit-Menü öffnen", "kit", "kit");
+        addMainOption(player, options, "Ränge", "Rangverwaltung öffnen", "ranks", "ranks");
+        addMainOption(player, options, "Auktionshaus", "Auktionshaus öffnen", "ah", "ah");
+        addMainOption(player, options, "Aufträge", "Spieler-Aufträge öffnen", "orders", "orders");
+        addMainOption(player, options, "Mace-Duelle", "Mace-Menü öffnen", "mace", "mace");
+        addMainOption(player, options, "Server wechseln", "Serverauswahl öffnen", "servers", "servers");
+        addMainOption(player, options, "Homes", "Deine Homes anzeigen", "homes", "homes");
+        addMainOption(player, options, "Voice-Chat", "Voice-Chat-Hilfe öffnen", "voice", "voice");
+        addMainOption(player, options, "Kopfgeld", "Kopfgeld anzeigen", "bounty", "bounty");
+        addMainOption(player, options, "Spielzeit", "Spielzeit anzeigen", "playtime", "playtime");
+        showMenu(player, "AllInOneMC – Hauptmenü", "Wähle einen Bereich aus.", options);
+    }
 
-        openJavaMenu(player);
+    private void addMainOption(Player player, List<MenuOption> options, String label,
+                               String description, String command, String permissionSuffix) {
+        String permission = "servertoolkit.menu." + permissionSuffix;
+        if (!player.hasPermission(permission)) return;
+        options.add(new MenuOption(label, description, () -> {
+            if (player.hasPermission(permission)) player.performCommand(command);
+            else player.sendMessage("§cDafür hast du keine Berechtigung.");
+        }));
     }
 
     public void showMenu(Player player, String title, String description, List<MenuOption> options) {
