@@ -164,6 +164,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     ClanManager clanManager() { return clanManager; }
     EconomyManager economyManager() { return economyManager; }
     NetworkSyncManager networkSyncManager() { return networkSyncManager; }
+    PopupMenuManager popupMenuManager() { return popupMenuManager; }
 
     private String[] prepend(String first, String[] rest) {
         String[] result = new String[rest.length + 1];
