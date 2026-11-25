@@ -8,6 +8,7 @@ commands:
   menu:
     description: Öffnet das plattformübergreifende Server-Popup-Menü.
     usage: /menu
+    permission: servertoolkit.menu.open
   bounty:
     description: Setzt oder zeigt ein serverübergreifendes Kopfgeld.
     usage: /bounty <Spieler> [Betrag]
@@ -165,6 +166,54 @@ commands:
     usage: /fakore <erz> [anzahl]
     permission: servertoolkit.admin
 permissions:
+  servertoolkit.menu.open:
+    description: Darf das AllInOne-Hauptmenü öffnen.
+    default: true
+  servertoolkit.menu.spawn:
+    description: Darf den Spawn-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.rtp:
+    description: Darf den RTP-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.shop:
+    description: Darf den Shop-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.sell:
+    description: Darf den Verkaufen-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.clan:
+    description: Darf den Clan-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.kit:
+    description: Darf den Kit-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.ranks:
+    description: Darf den Rangverwaltungs-Eintrag im Hauptmenü verwenden.
+    default: op
+  servertoolkit.menu.ah:
+    description: Darf den Auktionshaus-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.orders:
+    description: Darf den Aufträge-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.mace:
+    description: Darf den Mace-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.servers:
+    description: Darf den Serverwechsel-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.homes:
+    description: Darf den Homes-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.voice:
+    description: Darf den Voice-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.bounty:
+    description: Darf den Kopfgeld-Eintrag im Hauptmenü verwenden.
+    default: true
+  servertoolkit.menu.playtime:
+    description: Darf den Spielzeit-Eintrag im Hauptmenü verwenden.
+    default: true
   servertoolkit.admin:
     description: Darf Server-Spawn, Mace-Arena und Events verwalten.
     default: op
