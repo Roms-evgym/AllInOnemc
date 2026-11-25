@@ -60,29 +60,23 @@ public final class LobbyManager implements Listener {
             player.sendMessage(color("&cEs sind keine Zielserver konfiguriert."));
             return;
         }
-        SelectorHolder holder = new SelectorHolder();
-        Inventory menu = Bukkit.createInventory(holder, 27,
-                color(plugin.getConfig().getString("lobby.selector.title", "&8Server auswählen")));
-        holder.inventory = menu;
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
         for (String id : servers.getKeys(false)) {
             String path = "lobby.selector.servers." + id;
             String target = plugin.getConfig().getString(path + ".target", "").trim();
             if (target.isEmpty()) continue;
-            Material material = Material.matchMaterial(plugin.getConfig().getString(path + ".material", "COMPASS"));
-            if (material == null || !material.isItem()) material = Material.COMPASS;
-            int slot = plugin.getConfig().getInt(path + ".slot", -1);
-            if (slot < 0 || slot >= menu.getSize() || menu.getItem(slot) != null) continue;
-            ItemStack icon = new ItemStack(material);
-            ItemMeta meta = icon.getItemMeta();
-            meta.setDisplayName(color(plugin.getConfig().getString(path + ".name", "&c" + id)));
-            List<String> lore = plugin.getConfig().getStringList(path + ".lore");
-            if (!lore.isEmpty()) meta.setLore(lore.stream().map(this::color).toList());
-            icon.setItemMeta(meta);
-            menu.setItem(slot, icon);
-            holder.targets.put(slot, target);
+            String label = ChatColor.stripColor(color(plugin.getConfig().getString(path + ".name", "&c" + id)));
+            String description = String.join(" ", plugin.getConfig().getStringList(path + ".lore"));
+            options.add(new PopupMenuManager.MenuOption(label, ChatColor.stripColor(color(description)),
+                    () -> connectToServer(player, target)));
         }
-        GuiStyle.frame(menu);
-        player.openInventory(menu);
+        if (options.isEmpty()) {
+            player.sendMessage(color("&cEs sind keine gültigen Zielserver konfiguriert."));
+            return;
+        }
+        plugin.popupMenuManager().showMenu(player,
+                ChatColor.stripColor(color(plugin.getConfig().getString("lobby.selector.title", "&8Server auswählen"))),
+                "Wähle einen Zielserver.", options);
     }
 
     public void connectToServer(Player player, String target) {
