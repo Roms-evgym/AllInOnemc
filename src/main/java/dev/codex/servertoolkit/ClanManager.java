@@ -264,8 +264,14 @@ public final class ClanManager {
     }
 
     private void save() {
-        try { data.save(file); }
-        catch (IOException exception) { plugin.getLogger().severe("Konnte clans.yml nicht speichern: " + exception.getMessage()); }
+        try {
+            data.save(file);
+            if (plugin.utilityManager() != null) {
+                for (Player online : Bukkit.getOnlinePlayers()) plugin.utilityManager().refreshPlayerDisplay(online);
+            }
+        } catch (IOException exception) {
+            plugin.getLogger().severe("Konnte clans.yml nicht speichern: " + exception.getMessage());
+        }
     }
 
     private String color(String message) { return ChatColor.translateAlternateColorCodes('&', message); }
