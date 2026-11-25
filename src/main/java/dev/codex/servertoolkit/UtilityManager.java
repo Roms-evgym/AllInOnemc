@@ -183,9 +183,30 @@ public final class UtilityManager implements CommandExecutor, Listener {
     }
 
     private void openTrash(Player player) {
-        Inventory inventory = Bukkit.createInventory(new TrashHolder(), 54, GuiStyle.title("Papierkorb"));
-        player.openInventory(inventory);
-        player.sendMessage(color("&7Alles im Papierkorb wird beim Schließen gelöscht."));
+        ItemStack held = player.getInventory().getItemInMainHand();
+        if (held == null || held.getType().isAir()) {
+            player.sendMessage(color("&cHalte den Gegenstand, den du entsorgen möchtest, in deiner Haupthand."));
+            return;
+        }
+        String itemName = held.hasItemMeta() && held.getItemMeta().hasDisplayName()
+                ? ChatColor.stripColor(held.getItemMeta().getDisplayName()) : held.getType().name();
+        int amount = held.getAmount();
+        List<PopupMenuManager.MenuOption> options = List.of(
+                new PopupMenuManager.MenuOption("§cGegenstand entsorgen",
+                        amount + "x " + itemName + " endgültig löschen",
+                        () -> {
+                            ItemStack current = player.getInventory().getItemInMainHand();
+                            if (current == null || current.getType().isAir() || current.getType() != held.getType()
+                                    || current.getAmount() != amount) {
+                                player.sendMessage(color("&cDeine Haupthand hat sich geändert. Bitte erneut öffnen."));
+                                return;
+                            }
+                            player.getInventory().setItemInMainHand(null);
+                            player.sendMessage(color("&7" + amount + "x " + itemName + " wurde entsorgt."));
+                        }),
+                new PopupMenuManager.MenuOption("Abbrechen", "Nichts wird gelöscht.", () -> {})
+        );
+        plugin.popupMenuManager().showMenu(player, "Papierkorb", "Möchtest du den Gegenstand wirklich entsorgen?", options);
     }
 
     private void showRanks(Player viewer, String[] args) {
