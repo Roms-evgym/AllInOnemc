@@ -7,6 +7,7 @@ import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import io.papermc.paper.registry.RegistryKey;
 import io.papermc.paper.registry.event.RegistryEvents;
 import io.papermc.paper.registry.keys.DialogKeys;
+import io.papermc.paper.registry.TypedKey;
 import io.papermc.paper.registry.keys.tags.DialogTagKeys;
 import io.papermc.paper.registry.data.dialog.ActionButton;
 import io.papermc.paper.registry.data.dialog.DialogBase;
@@ -19,7 +20,7 @@ import java.util.List;
 import java.util.Set;
 
 public final class ServerToolkitBootstrap implements PluginBootstrap {
-    public static final var MENU_DIALOG = DialogKeys.create(Key.key("allinonemc:main_menu"));
+    public static final TypedKey<Dialog> MENU_DIALOG = DialogKeys.create(Key.key("allinonemc:main_menu"));
 
     @Override
     public void bootstrap(BootstrapContext context) {
