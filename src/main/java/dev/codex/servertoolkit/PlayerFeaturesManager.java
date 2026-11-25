@@ -86,31 +86,25 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
     }
 
     private void openShop(Player player) {
-        Inventory inv = Bukkit.createInventory(new ShopHolder(), 54, title("&8Server-Shop"));
         ConfigurationSection items = plugin.getConfig().getConfigurationSection("shop.items");
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
         if (items != null) {
             List<String> ids = new ArrayList<>(items.getKeys(false));
             ids.sort(String.CASE_INSENSITIVE_ORDER);
-            int slot = 0;
             for (String id : ids) {
-                if (slot >= 45) break;
                 Material material = Material.matchMaterial(id);
                 double price = plugin.getConfig().getDouble("shop.items." + id + ".price", -1);
                 int amount = Math.max(1, Math.min(64, plugin.getConfig().getInt("shop.items." + id + ".amount", 1)));
                 if (material == null || !material.isItem() || material.isAir() || price <= 0) continue;
-                ItemStack display = new ItemStack(material, amount);
-                ItemMeta meta = display.getItemMeta();
-                meta.setDisplayName(color("&e" + pretty(id)));
-                meta.setLore(List.of(color("&7Preis: &6" + price + " Coins"),
-                        color("&7Menge: &f" + amount), color("&aKlicken zum Kaufen")));
-                meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "buy:" + id);
-                display.setItemMeta(meta);
-                inv.setItem(slot++, display);
+                options.add(new PopupMenuManager.MenuOption(pretty(id) + " ×" + amount,
+                        "Preis: " + price + " Coins", () -> buy(player, id)));
             }
         }
-        inv.setItem(49, menuItem(Material.BARRIER, "&cSchließen", "close"));
-        GuiStyle.frame(inv);
-        player.openInventory(inv);
+        if (options.isEmpty()) {
+            player.sendMessage(color("&cDer Shop enthält derzeit keine Artikel."));
+            return;
+        }
+        plugin.popupMenuManager().showMenu(player, "AllInOneMC – Shop", "Wähle einen Artikel zum Kaufen.", options);
     }
 
     private void buy(Player player, String id) {
@@ -188,12 +182,24 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
     private void openRtpMenu(Player player) {
         if (plugin.isLobbyMode()) { player.sendMessage(color("&cRTP ist auf der Lobby deaktiviert.")); return; }
         if (!player.hasPermission("servertoolkit.rtp")) { player.sendMessage(color("&cDafür hast du keine Rechte.")); return; }
-        Inventory inv = Bukkit.createInventory(new RtpHolder(), 27, title("&8Zufalls-Teleport"));
-        addRtpWorld(inv, 11, "survival", Material.GRASS_BLOCK, "&aOverworld", "Zufälliger sicherer Ort in der Overworld");
-        addRtpWorld(inv, 13, "nether", Material.NETHERRACK, "&cNether", "Zufälliger sicherer Ort im Nether");
-        addRtpWorld(inv, 15, "end", Material.END_STONE, "&5End", "Zufälliger sicherer Ort im End");
-        inv.setItem(22, menuItem(Material.BARRIER, "&cSchließen", "close"));
-        player.openInventory(inv);
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        addRtpOption(player, options, "survival", "Overworld", "world");
+        addRtpOption(player, options, "nether", "Nether", "world_nether");
+        addRtpOption(player, options, "end", "End", "world_the_end");
+        plugin.popupMenuManager().showMenu(player, "AllInOneMC – Zufalls-Teleport", "Wähle eine Dimension.", options);
+    }
+
+    private void addRtpOption(Player player, List<PopupMenuManager.MenuOption> options,
+                              String key, String label, String fallbackWorld) {
+        String worldName = plugin.getConfig().getString("rtp.worlds." + key, fallbackWorld);
+        World world = Bukkit.getWorld(worldName);
+        if (world == null) {
+            options.add(new PopupMenuManager.MenuOption(label + " (nicht verfügbar)",
+                    "Welt nicht geladen: " + worldName, () -> player.sendMessage(color("&cDiese Welt ist nicht geladen."))));
+        } else {
+            options.add(new PopupMenuManager.MenuOption(label,
+                    "Zufälliger sicherer Ort in " + label, () -> randomTeleport(player, key)));
+        }
     }
 
     private void addRtpWorld(Inventory inv, int slot, String key, Material icon, String name, String lore) {
