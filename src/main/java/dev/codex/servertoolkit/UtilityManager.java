@@ -603,7 +603,7 @@ public final class UtilityManager implements CommandExecutor, Listener {
         Objective objective = board.registerNewObjective("stinfo", "dummy", color(plugin.getConfig().getString("scoreboard.title", "&6&lAllInOne Survival")));
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         String prefix = rankPrefix(getRankId(player));
-        String[] lines = {"&7", "&fRang: " + prefix, "&fWelt: &a" + player.getWorld().getName(), "&1", "&6Geld: &f" + plugin.economyManager().formatted(player.getUniqueId()), "&8"};
+        String[] lines = {"&7", "&fRang: " + prefix, "&fWelt: &a" + player.getWorld().getName(), "&1", "&6Geld: &f" + plugin.economyManager().formatted(player.getUniqueId()), "&fSpielzeit: &b" + plugin.playtimeManager().format(plugin.playtimeManager().liveSeconds(player)), "&fKopfgeld: &e" + String.format(java.util.Locale.GERMANY, "%.2f", plugin.bountyManager().bounty(player.getUniqueId())) + " Coins", "&8"};
         int score = lines.length; for (String line : lines) objective.getScore(color(line)).setScore(score--);
         player.setScoreboard(board);
     }
