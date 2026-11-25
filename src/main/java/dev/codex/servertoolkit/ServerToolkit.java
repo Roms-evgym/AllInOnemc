@@ -92,6 +92,10 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         if (!(event.getCommonConnection() instanceof PlayerGameConnection connection)) return;
         if (!event.getIdentifier().namespace().equals("allinonemc")) return;
         Player player = connection.getPlayer();
+        if (!player.hasPermission("servertoolkit.menu.open")) {
+            player.sendMessage(color("&cDu darfst das Hauptmenü nicht öffnen."));
+            return;
+        }
         String action = event.getIdentifier().value();
         String command;
         String permission;
