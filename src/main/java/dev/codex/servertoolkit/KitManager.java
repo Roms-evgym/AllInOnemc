@@ -34,6 +34,7 @@ public final class KitManager implements Listener {
             case "delete" -> delete(player, args);
             case "cooldown" -> cooldown(player, args);
             case "access" -> access(player, args);
+            case "manage" -> manageMenu(player);
             case "claim" -> {
                 if (args.length < 2) player.sendMessage(color("&cNutzung: /kit claim <Name>"));
                 else claim(player, normalize(args[1]));
@@ -156,6 +157,62 @@ public final class KitManager implements Listener {
         player.sendMessage(color("&aKit &f" + id + " &aerhalten."));
     }
 
+    private void manageMenu(Player player) {
+        if (!manage(player)) return;
+        ConfigurationSection kits = data.getConfigurationSection("kits");
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        if (kits != null) for (String id : kits.getKeys(false))
+            options.add(new PopupMenuManager.MenuOption(id, "Zugriff: " + accessDescription(id), () -> manageKit(player, id)));
+        options.add(new PopupMenuManager.MenuOption("Zurück", "Spieler-Kit-Menü", () -> open(player)));
+        plugin.popupMenuManager().showMenu(player, "Kit-Verwaltung", "Wähle ein Kit.", options);
+    }
+
+    private void manageKit(Player player, String id) {
+        if (!manage(player) || !data.contains("kits." + id)) return;
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        options.add(new PopupMenuManager.MenuOption("Für alle Spieler", "Zugriff freigeben.", () -> setAccess(player, id, "all", "")));
+        options.add(new PopupMenuManager.MenuOption("Nur bestimmter Rang", "Rang auswählen.", () -> openKitRankAccess(player, id)));
+        options.add(new PopupMenuManager.MenuOption("Nur bestimmter Spieler", "Online-Spieler auswählen.", () -> openKitPlayerAccess(player, id)));
+        options.add(new PopupMenuManager.MenuOption("Kit löschen", "Dieses Kit dauerhaft löschen.", () -> {
+            data.set("kits." + id, null); save(); player.sendMessage(color("&aKit gelöscht.")); manageMenu(player);
+        }));
+        options.add(new PopupMenuManager.MenuOption("Zurück", "Kit-Liste", () -> manageMenu(player)));
+        plugin.popupMenuManager().showMenu(player, "Kit: " + id, "Zugriffsrechte bearbeiten.", options);
+    }
+
+    private void openKitRankAccess(Player player, String id) {
+        if (!manage(player)) return;
+        ConfigurationSection ranks = plugin.getConfig().getConfigurationSection("ranks");
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        if (ranks != null) for (String rank : ranks.getKeys(false))
+            options.add(new PopupMenuManager.MenuOption(rank, "Nur dieser Rang darf das Kit holen.", () -> setAccess(player, id, "rank", rank)));
+        options.add(new PopupMenuManager.MenuOption("Zurück", "Kit-Einstellungen", () -> manageKit(player, id)));
+        plugin.popupMenuManager().showMenu(player, "Kit-Rang: " + id, "Erlaubten Rang auswählen.", options);
+    }
+
+    private void openKitPlayerAccess(Player player, String id) {
+        if (!manage(player)) return;
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        for (Player target : plugin.getServer().getOnlinePlayers())
+            options.add(new PopupMenuManager.MenuOption(target.getName(), "Nur dieser Spieler darf das Kit holen.", () -> {
+                data.set("kits." + id + ".access.type", "player");
+                data.set("kits." + id + ".access.value", target.getUniqueId().toString());
+                data.set("kits." + id + ".access.player-name", target.getName());
+                save(); manageKit(player, id);
+            }));
+        options.add(new PopupMenuManager.MenuOption("Zurück", "Kit-Einstellungen", () -> manageKit(player, id)));
+        plugin.popupMenuManager().showMenu(player, "Kit-Spieler: " + id, "Erlaubten Spieler auswählen.", options);
+    }
+
+    private void setAccess(Player player, String id, String type, String value) {
+        if (!manage(player)) return;
+        String path = "kits." + id + ".access";
+        data.set(path + ".type", type);
+        data.set(path + ".value", value.isBlank() ? null : value.toLowerCase(Locale.ROOT));
+        if (type.equals("all")) data.set(path + ".player-name", null);
+        save(); player.sendMessage(color("&aKit-Rechte gespeichert.")); manageKit(player, id);
+    }
+
     private void open(Player player) {
         ConfigurationSection kits = data.getConfigurationSection("kits");
         if (kits == null || kits.getKeys(false).isEmpty()) {
@@ -177,6 +234,7 @@ public final class KitManager implements Listener {
                     "Zugriff: " + accessDescription(id) + " • Cooldown: " + (seconds == 0 ? "Keiner" : formatTime(seconds)) + " • " + state,
                     () -> claim(player, id)));
         }
+        if (manage(player)) options.add(new PopupMenuManager.MenuOption("⚙ Kits verwalten", "Kit-Zugriffsrechte bearbeiten.", () -> manageMenu(player)));
         if (options.isEmpty()) { player.sendMessage(color("&cEs gibt keine Kits, die du beanspruchen darfst.")); return; }
         plugin.popupMenuManager().showMenu(player, "AllInOneMC – Kits", "Wähle ein Kit zum Abholen.", options);
     }
