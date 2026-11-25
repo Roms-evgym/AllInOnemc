@@ -19,6 +19,8 @@ import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import io.papermc.paper.connection.PlayerGameConnection;
+import io.papermc.paper.event.player.PlayerCustomClickEvent;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Locale;
@@ -79,6 +81,39 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         getCommand("fakebase").setExecutor(worldSpawnManager);
         getCommand("fakore").setExecutor(worldSpawnManager);
         getLogger().info("ServerToolkit gestartet im " + (lobbyMode ? "LOBBY" : "SURVIVAL") + "-Modus.");
+    }
+
+    @EventHandler
+    public void onQuickMenuAction(PlayerCustomClickEvent event) {
+        if (!(event.getCommonConnection() instanceof PlayerGameConnection connection)) return;
+        if (!event.getIdentifier().namespace().equals("allinonemc")) return;
+        Player player = connection.getPlayer();
+        String action = event.getIdentifier().value();
+        String command;
+        String permission;
+        switch (action) {
+            case "menu_spawn" -> { command = "spawn"; permission = "servertoolkit.menu.spawn"; }
+            case "menu_rtp" -> { command = "rtp"; permission = "servertoolkit.menu.rtp"; }
+            case "menu_shop" -> { command = "shop"; permission = "servertoolkit.menu.shop"; }
+            case "menu_sell" -> { command = "sell hand"; permission = "servertoolkit.menu.sell"; }
+            case "menu_clan" -> { command = "clan"; permission = "servertoolkit.menu.clan"; }
+            case "menu_kit" -> { command = "kit"; permission = "servertoolkit.menu.kit"; }
+            case "menu_ranks" -> { command = "ranks"; permission = "servertoolkit.menu.ranks"; }
+            case "menu_ah" -> { command = "ah"; permission = "servertoolkit.menu.ah"; }
+            case "menu_orders" -> { command = "orders"; permission = "servertoolkit.menu.orders"; }
+            case "menu_mace" -> { command = "mace"; permission = "servertoolkit.menu.mace"; }
+            case "menu_servers" -> { command = "servers"; permission = "servertoolkit.menu.servers"; }
+            case "menu_homes" -> { command = "homes"; permission = "servertoolkit.menu.homes"; }
+            case "menu_voice" -> { command = "voice"; permission = "servertoolkit.menu.voice"; }
+            case "menu_bounty" -> { command = "bounty"; permission = "servertoolkit.menu.bounty"; }
+            case "menu_playtime" -> { command = "playtime"; permission = "servertoolkit.menu.playtime"; }
+            default -> { return; }
+        }
+        if (!player.hasPermission(permission)) {
+            player.sendMessage(color("&cDafür hast du keine Berechtigung."));
+            return;
+        }
+        player.performCommand(command);
     }
 
     @Override
