@@ -40,6 +40,8 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     private NetworkSyncManager networkSyncManager;
     private RedeemCodeManager redeemCodeManager;
     private PopupMenuManager popupMenuManager;
+    private PlaytimeManager playtimeManager;
+    private BountyManager bountyManager;
     private final Map<java.util.UUID, Long> rtpCooldowns = new HashMap<>();
 
     @Override
@@ -58,6 +60,8 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         playerFeaturesManager = new PlayerFeaturesManager(this);
         utilityManager = new UtilityManager(this);
         networkSyncManager = new NetworkSyncManager(this);
+        playtimeManager = new PlaytimeManager(this);
+        bountyManager = new BountyManager(this);
         redeemCodeManager = new RedeemCodeManager(this);
         popupMenuManager = new PopupMenuManager(this);
         marketManager = new MarketManager(this);
@@ -68,7 +72,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         WorldSpawnManager worldSpawnManager = new WorldSpawnManager();
         for (String name : new String[]{"spawn", "setspawn", "sethome", "home", "homes", "delhome", "rtp", "clan", "clanduel", "mace",
                 "fly", "god", "invsee", "echest", "ecsee", "trash", "ranks", "rank", "voice", "ah", "order", "orders", "kit",
-                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "servers", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode", "menu"}) {
+                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "servers", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode", "menu", "bounty", "playtime"}) {
             getCommand(name).setExecutor(this);
         }
         getCommand("sit").setExecutor(sitManager);
@@ -90,6 +94,8 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             case "menu" -> { popupMenuManager.openMainMenu(sender); return true; }
             case "code" -> { redeemCodeManager.handleRedeem(sender, args); return true; }
             case "setcode" -> { redeemCodeManager.handleCreate(sender, args); return true; }
+            case "playtime" -> { if (sender instanceof Player p) playtimeManager.handle(p, args); else sender.sendMessage("Nur im Spiel verfügbar."); return true; }
+            case "bounty" -> { if (sender instanceof Player p) bountyManager.handle(p, args); else sender.sendMessage("Nur im Spiel verfügbar."); return true; }
             case "ban" -> { moderationManager.handleBan(sender, args); return true; }
             case "punish" -> { moderationManager.handlePunish(sender, args); return true; }
             case "banpreset" -> { moderationManager.handlePreset(sender, args); return true; }
@@ -165,6 +171,8 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     EconomyManager economyManager() { return economyManager; }
     NetworkSyncManager networkSyncManager() { return networkSyncManager; }
     PopupMenuManager popupMenuManager() { return popupMenuManager; }
+    PlaytimeManager playtimeManager() { return playtimeManager; }
+    BountyManager bountyManager() { return bountyManager; }
 
     private String[] prepend(String first, String[] rest) {
         String[] result = new String[rest.length + 1];
