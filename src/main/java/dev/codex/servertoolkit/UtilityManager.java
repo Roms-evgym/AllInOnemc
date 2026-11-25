@@ -512,6 +512,16 @@ public final class UtilityManager implements CommandExecutor, Listener {
     public String rankId(Player player) { return getRankId(player); }
     public String rankId(OfflinePlayer player) { return getRankId(player); }
 
+    public boolean setRankFromCode(Player player, String rankId) {
+        if (player == null || rankId == null || !rankId.matches("[a-zA-Z0-9_-]{1,32}")
+                || !plugin.getConfig().isConfigurationSection("ranks." + rankId)) return false;
+        rankData.set("players." + player.getUniqueId(), rankId.toLowerCase(Locale.ROOT));
+        saveRanks();
+        refreshPlayer(player);
+        if (plugin.networkSyncManager() != null) plugin.networkSyncManager().publish(player);
+        return true;
+    }
+
     void applySyncedRank(UUID uuid, String rankId) {
         String path = "ranks." + rankId;
         if (!plugin.getConfig().isConfigurationSection(path)) {
