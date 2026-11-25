@@ -617,17 +617,34 @@ public final class UtilityManager implements CommandExecutor, Listener {
     }
 
     void updateScoreboard(Player player) {
-        if (!plugin.getConfig().getBoolean("scoreboard.enabled", false)) return;
         ScoreboardManager manager = Bukkit.getScoreboardManager(); if (manager == null) return;
         Scoreboard board = manager.getNewScoreboard();
-        Objective objective = board.registerNewObjective("stinfo", "dummy", color(plugin.getConfig().getString("scoreboard.title", "&6&lAllInOne Survival")));
-        objective.setDisplaySlot(DisplaySlot.SIDEBAR);
-        String prefix = rankPrefix(getRankId(player));
+
+        // Team prefix/suffix render rank and clan above the player's head, independently
+        // from the sidebar and independently from the player's real permissions.
         boolean nicked = plugin.contentToolsManager() != null && plugin.contentToolsManager().nickName(player) != null;
-        String[] lines = nicked
-                ? new String[]{"&7", "&fWelt: &a" + player.getWorld().getName(), "&1", "&6Geld: &f" + plugin.economyManager().formatted(player.getUniqueId()), "&fSpielzeit: &b" + plugin.playtimeManager().format(plugin.playtimeManager().liveSeconds(player)), "&fKopfgeld: &e" + String.format(java.util.Locale.GERMANY, "%.2f", plugin.bountyManager().bounty(player.getUniqueId())) + " Coins", "&8"}
-                : new String[]{"&7", "&fRang: " + prefix, "&fWelt: &a" + player.getWorld().getName(), "&1", "&6Geld: &f" + plugin.economyManager().formatted(player.getUniqueId()), "&fSpielzeit: &b" + plugin.playtimeManager().format(plugin.playtimeManager().liveSeconds(player)), "&fKopfgeld: &e" + String.format(java.util.Locale.GERMANY, "%.2f", plugin.bountyManager().bounty(player.getUniqueId())) + " Coins", "&8"};
-        int score = lines.length; for (String line : lines) objective.getScore(color(line)).setScore(score--);
+        String displayRank = nicked && plugin.contentToolsManager().nickRankId(player) != null
+                ? plugin.contentToolsManager().nickRankId(player) : getRankId(player);
+        String headPrefix = rankPrefix(displayRank) + " ";
+        String clan = plugin.clanManager() == null ? null : plugin.clanManager().clanName(player.getUniqueId());
+        String headSuffix = clan == null || clan.isBlank() ? "" : color(" &8[&e" + clan + "&8]");
+        if (headPrefix.length() > 64) headPrefix = headPrefix.substring(0, 64);
+        if (headSuffix.length() > 64) headSuffix = headSuffix.substring(0, 64);
+        String teamName = "aio" + player.getUniqueId().toString().replace("-", "").substring(0, 13);
+        var team = board.registerNewTeam(teamName);
+        team.setPrefix(headPrefix);
+        team.setSuffix(headSuffix);
+        team.addEntry(player.getName());
+
+        if (plugin.getConfig().getBoolean("scoreboard.enabled", false)) {
+            Objective objective = board.registerNewObjective("stinfo", "dummy", color(plugin.getConfig().getString("scoreboard.title", "&6&lAllInOne Survival")));
+            objective.setDisplaySlot(DisplaySlot.SIDEBAR);
+            String prefix = rankPrefix(getRankId(player));
+            String[] lines = nicked
+                    ? new String[]{"&7", "&fWelt: &a" + player.getWorld().getName(), "&1", "&6Geld: &f" + plugin.economyManager().formatted(player.getUniqueId()), "&fSpielzeit: &b" + plugin.playtimeManager().format(plugin.playtimeManager().liveSeconds(player)), "&fKopfgeld: &e" + String.format(java.util.Locale.GERMANY, "%.2f", plugin.bountyManager().bounty(player.getUniqueId())) + " Coins", "&8"}
+                    : new String[]{"&7", "&fRang: " + prefix, "&fWelt: &a" + player.getWorld().getName(), "&1", "&6Geld: &f" + plugin.economyManager().formatted(player.getUniqueId()), "&fSpielzeit: &b" + plugin.playtimeManager().format(plugin.playtimeManager().liveSeconds(player)), "&fKopfgeld: &e" + String.format(java.util.Locale.GERMANY, "%.2f", plugin.bountyManager().bounty(player.getUniqueId())) + " Coins", "&8"};
+            int score = lines.length; for (String line : lines) objective.getScore(color(line)).setScore(score--);
+        }
         player.setScoreboard(board);
     }
 
