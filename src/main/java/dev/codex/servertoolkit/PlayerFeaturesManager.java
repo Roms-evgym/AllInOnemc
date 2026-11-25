@@ -75,7 +75,7 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
         }
         switch (command.getName().toLowerCase(Locale.ROOT)) {
             case "shop" -> openShop(player);
-            case "sell" -> sell(player, args);
+            case "sell" -> { if (args.length == 0) openSellMenu(player); else sell(player, args); }
             case "rtp" -> openRtpMenu(player);
             case "tpa" -> sendRequest(player, args);
             case "tpaccept" -> acceptRequest(player);
@@ -87,24 +87,30 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
 
     private void openShop(Player player) {
         ConfigurationSection items = plugin.getConfig().getConfigurationSection("shop.items");
-        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        ShopHolder holder = new ShopHolder();
+        Inventory inventory = Bukkit.createInventory(holder, 54, color("&6&lServer-Shop"));
+        holder.inventory = inventory;
         if (items != null) {
             List<String> ids = new ArrayList<>(items.getKeys(false));
             ids.sort(String.CASE_INSENSITIVE_ORDER);
+            int slot = 0;
             for (String id : ids) {
+                if (slot >= 54) break;
                 Material material = Material.matchMaterial(id);
                 double price = plugin.getConfig().getDouble("shop.items." + id + ".price", -1);
                 int amount = Math.max(1, Math.min(64, plugin.getConfig().getInt("shop.items." + id + ".amount", 1)));
                 if (material == null || !material.isItem() || material.isAir() || price <= 0) continue;
-                options.add(new PopupMenuManager.MenuOption(pretty(id) + " ×" + amount,
-                        "Preis: " + price + " Coins", () -> buy(player, id)));
+                ItemStack display = new ItemStack(material, amount);
+                ItemMeta meta = display.getItemMeta();
+                meta.setDisplayName(color("&e" + pretty(id)));
+                meta.setLore(List.of(color("&7Preis: &6" + price + " Coins"), color("&aKlicken zum Kaufen")));
+                meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "buy:" + id);
+                display.setItemMeta(meta);
+                inventory.setItem(slot++, display);
             }
         }
-        if (options.isEmpty()) {
-            player.sendMessage(color("&cDer Shop enthält derzeit keine Artikel."));
-            return;
-        }
-        plugin.popupMenuManager().showMenu(player, "AllInOneMC – Shop", "Wähle einen Artikel zum Kaufen.", options);
+        if (inventory.isEmpty()) { player.sendMessage(color("&cDer Shop enthält derzeit keine Artikel.")); return; }
+        player.openInventory(inventory);
     }
 
     private void buy(Player player, String id) {
@@ -143,6 +149,40 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
             if (capacity >= wanted.getAmount()) return true;
         }
         return false;
+    }
+
+    private void openSellMenu(Player player) {
+        SellHolder holder = new SellHolder();
+        Inventory inventory = Bukkit.createInventory(holder, 54, color("&6&lVerkaufen"));
+        holder.inventory = inventory;
+        int slot = 0;
+        for (int source = 0; source < player.getInventory().getStorageContents().length && slot < 54; source++) {
+            ItemStack stack = player.getInventory().getItem(source);
+            if (stack == null || stack.getType().isAir()) continue;
+            double unit = plugin.getConfig().getDouble("sell-prices." + stack.getType().name(), -1);
+            if (unit <= 0) continue;
+            ItemStack display = stack.clone();
+            ItemMeta meta = display.getItemMeta();
+            meta.setLore(List.of(color("&7Preis pro Stück: &6" + unit + " Coins"),
+                    color("&7Gesamt: &e" + (unit * stack.getAmount()) + " Coins"), color("&aKlicken zum Verkaufen")));
+            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "sellslot:" + source);
+            display.setItemMeta(meta);
+            inventory.setItem(slot++, display);
+        }
+        if (slot == 0) { player.sendMessage(color("&cDu hast keine verkaufbaren Gegenstände im Inventar.")); return; }
+        player.openInventory(inventory);
+    }
+    private void sellSlot(Player player, int sourceSlot) {
+        if (sourceSlot < 0 || sourceSlot >= player.getInventory().getStorageContents().length) return;
+        ItemStack stack = player.getInventory().getItem(sourceSlot);
+        if (stack == null || stack.getType().isAir()) { player.sendMessage(color("&cDieser Gegenstand ist nicht mehr vorhanden.")); return; }
+        double unit = plugin.getConfig().getDouble("sell-prices." + stack.getType().name(), -1);
+        if (unit <= 0) { player.sendMessage(color("&cDieser Gegenstand kann nicht verkauft werden.")); return; }
+        int amount = stack.getAmount(); double total = unit * amount; String name = pretty(stack.getType().name());
+        player.getInventory().setItem(sourceSlot, null);
+        plugin.economyManager().deposit(player.getUniqueId(), total);
+        player.sendMessage(color("&a" + amount + "x " + name + " für &6" + total + " Coins &averkauft."));
+        openSellMenu(player);
     }
 
     private void sell(Player player, String[] args) {
@@ -321,7 +361,7 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
     @EventHandler
     public void onMenuClick(InventoryClickEvent event) {
         InventoryHolder holder = event.getView().getTopInventory().getHolder();
-        if (!(holder instanceof ShopHolder) && !(holder instanceof RtpHolder)) return;
+        if (!(holder instanceof ShopHolder) && !(holder instanceof RtpHolder) && !(holder instanceof SellHolder)) return;
         event.setCancelled(true);
         if (!(event.getWhoClicked() instanceof Player player) || event.getRawSlot() < 0
                 || event.getRawSlot() >= event.getView().getTopInventory().getSize()) return;
@@ -332,6 +372,10 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
         if (action.equals("close")) { player.closeInventory(); return; }
         if (action.startsWith("buy:")) buy(player, action.substring(4));
         if (action.startsWith("rtp:")) randomTeleport(player, action.substring(4));
+        if (action.startsWith("sellslot:")) {
+            try { sellSlot(player, Integer.parseInt(action.substring(9))); }
+            catch (NumberFormatException ignored) { player.sendMessage(color("&cUngültiger Inventarplatz.")); }
+        }
     }
 
     @EventHandler
@@ -364,6 +408,7 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
     private String color(String text) { return ChatColor.translateAlternateColorCodes('&', text); }
 
     private final Map<UUID, Long> rtpCooldowns = new HashMap<>();
-    private static final class ShopHolder implements InventoryHolder { @Override public Inventory getInventory() { return null; } }
-    private static final class RtpHolder implements InventoryHolder { @Override public Inventory getInventory() { return null; } }
+    private static final class ShopHolder implements InventoryHolder { private Inventory inventory; @Override public Inventory getInventory() { return inventory; } }
+    private static final class RtpHolder implements InventoryHolder { private Inventory inventory; @Override public Inventory getInventory() { return inventory; } }
+    private static final class SellHolder implements InventoryHolder { private Inventory inventory; @Override public Inventory getInventory() { return inventory; } }
 }
