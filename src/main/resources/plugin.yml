@@ -3,8 +3,11 @@ version: 1.14.2
 main: dev.codex.servertoolkit.ServerToolkit
 api-version: '26.3'
 description: Kleine Lobby- und Survival-Werkzeuge in einem Plugin.
-softdepend: [Vault, SMPCore, LuckPerms, LuckTAB, voicechat]
+softdepend: [Vault, SMPCore, LuckPerms, LuckTAB, voicechat, floodgate]
 commands:
+  menu:
+    description: Öffnet das plattformübergreifende Server-Popup-Menü.
+    usage: /menu
   spawn:
     description: Teleportiert zum Server-Spawn.
     usage: /spawn
