@@ -124,35 +124,34 @@ public final class ModerationManager implements Listener {
     }
 
     private void openBanRankActors(Player player) {
-        List<String> ids = ranks();
-        Inventory inv = Bukkit.createInventory(new BanRankHolder(), 54, GuiStyle.title("Ban-Rechte: Ausführender Rang"));
-        int[] slots = vanishSlots();
-        for (int i = 0; i < Math.min(slots.length, ids.size()); i++) {
-            String id = ids.get(i);
-            inv.setItem(slots[i], banRankItem(Material.PLAYER_HEAD, "&e" + rankDisplay(id),
-                    "&7Auswählen, welche Ränge &f" + rankDisplay(id) + " &7bannen darf.", "actor:" + id));
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        for (String id : ranks()) {
+            options.add(new PopupMenuManager.MenuOption(rankDisplay(id),
+                    "Berechtigungen für diesen ausführenden Rang bearbeiten",
+                    () -> openBanRankTargets(player, id)));
         }
-        inv.setItem(49, banRankItem(Material.BARRIER, "&cSchließen", "", "close"));
-        GuiStyle.frame(inv);
-        player.openInventory(inv);
+        plugin.popupMenuManager().showMenu(player, "Ban-Rechte – Ausführender Rang",
+                "Wähle den Rang, der bannen darf.", options);
     }
 
     private void openBanRankTargets(Player player, String actor) {
         if (!plugin.getConfig().isConfigurationSection("ranks." + actor)) { openBanRankActors(player); return; }
-        List<String> ids = ranks();
-        Inventory inv = Bukkit.createInventory(new BanRankHolder(), 54, GuiStyle.title("Ban-Rechte: " + rankDisplay(actor)));
-        int[] slots = vanishSlots();
-        for (int i = 0; i < Math.min(slots.length, ids.size()); i++) {
-            String target = ids.get(i);
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        for (String target : ranks()) {
             boolean allowed = data.getBoolean("ban-ranks." + actor + "." + target, defaultCanBan(actor, target));
-            inv.setItem(slots[i], banRankItem(allowed ? Material.LIME_DYE : Material.GRAY_DYE,
-                    (allowed ? "&aDarf bannen: " : "&cDarf NICHT bannen: ") + rankDisplay(target),
-                    "&7Klicken zum Umschalten", "toggle:" + actor + ":" + target));
+            options.add(new PopupMenuManager.MenuOption((allowed ? "§a✓ " : "§c✗ ") + rankDisplay(target),
+                    allowed ? "Darf diesen Rang bannen – antippen zum Deaktivieren"
+                            : "Darf diesen Rang nicht bannen – antippen zum Aktivieren",
+                    () -> {
+                        String path = "ban-ranks." + actor + "." + target;
+                        data.set(path, !data.getBoolean(path, defaultCanBan(actor, target)));
+                        save();
+                        openBanRankTargets(player, actor);
+                    }));
         }
-        inv.setItem(45, banRankItem(Material.ARROW, "&7« Ränge", "", "back"));
-        inv.setItem(49, banRankItem(Material.BARRIER, "&cSchließen", "", "close"));
-        GuiStyle.frame(inv);
-        player.openInventory(inv);
+        options.add(new PopupMenuManager.MenuOption("« Zurück", "Zur Rang-Auswahl", () -> openBanRankActors(player)));
+        plugin.popupMenuManager().showMenu(player, "Ban-Rechte – " + rankDisplay(actor),
+                "Tippe einen Rang an, um das Ban-Recht umzuschalten.", options);
     }
 
     private String rankDisplay(String id) {
@@ -245,43 +244,56 @@ public final class ModerationManager implements Listener {
     }
 
     private void openPresetMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(new PresetHolder(), 54, GuiStyle.title("Ban-Presets"));
         ConfigurationSection presets = data.getConfigurationSection("presets");
         List<String> ids = presets == null ? new ArrayList<>() : new ArrayList<>(presets.getKeys(false));
         ids.sort(String.CASE_INSENSITIVE_ORDER);
-        int[] slots = vanishSlots();
-        for (int i = 0; i < Math.min(slots.length, ids.size()); i++) {
-            String id = ids.get(i);
-            inv.setItem(slots[i], presetItem(Material.NAME_TAG, "&c" + id,
-                    "&7Dauer: &f" + data.getString("presets." + id + ".duration", "perm")
-                            + " &8| &7Grund: &f" + data.getString("presets." + id + ".reason", "Regelverstoß"), "open:" + id));
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        for (String id : ids) {
+            options.add(new PopupMenuManager.MenuOption(id,
+                    "Dauer: " + data.getString("presets." + id + ".duration", "perm")
+                            + " | Grund: " + data.getString("presets." + id + ".reason", "Regelverstoß"),
+                    () -> openPresetEditor(player, id)));
         }
-        inv.setItem(49, presetItem(Material.EMERALD, "&a+ Neues Preset", "&7Klicken und ID im Chat eingeben", "new"));
-        inv.setItem(53, presetItem(Material.BARRIER, "&cSchließen", "", "close"));
-        GuiStyle.frame(inv);
-        player.openInventory(inv);
+        options.add(new PopupMenuManager.MenuOption("+ Neues Preset", "Neues Straf-Preset erstellen", () -> {
+            pendingPresetInputs.put(player.getUniqueId(), new PendingPresetInput("new", ""));
+            player.sendMessage(color("&eSchreibe eine ID für das neue Preset in den Chat (oder cancel)."));
+        }));
+        plugin.popupMenuManager().showMenu(player, "Ban-Presets", "Wähle ein Preset zum Bearbeiten.", options);
     }
 
     private void openPresetEditor(Player player, String id) {
         if (!data.isConfigurationSection("presets." + id)) { openPresetMenu(player); return; }
-        Inventory inv = Bukkit.createInventory(new PresetHolder(), 27, GuiStyle.title("Preset: " + id));
         String duration = data.getString("presets." + id + ".duration", "perm");
         String reason = data.getString("presets." + id + ".reason", "Regelverstoß");
-        inv.setItem(10, presetItem(Material.WRITABLE_BOOK, "&eGrund ändern", "&7Aktuell: &f" + reason, "reason:" + id));
-        inv.setItem(13, presetItem(Material.CLOCK, "&eDauer ändern", "&7Aktuell: &f" + duration, "duration:" + id));
-        inv.setItem(16, presetItem(Material.MACE, "&cBanhammer geben", "&7Erstellt einen Hammer für dieses Preset", "hammer:" + id));
-        inv.setItem(22, presetItem(Material.ARROW, "&c« Zurück", "", "back"));
-        inv.setItem(25, presetItem(Material.TNT, "&4Preset löschen", "&7Öffnet die Löschbestätigung", "delete:" + id));
-        GuiStyle.frame(inv);
-        player.openInventory(inv);
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        options.add(new PopupMenuManager.MenuOption("Grund ändern", "Aktuell: " + reason, () -> {
+            pendingPresetInputs.put(player.getUniqueId(), new PendingPresetInput("reason", id));
+            player.sendMessage(color("&eSchreibe den neuen Bann-Grund in den Chat (oder cancel)."));
+        }));
+        options.add(new PopupMenuManager.MenuOption("Dauer ändern", "Aktuell: " + duration, () -> {
+            List<String> durations = List.of("30m", "2h", "1d", "7d", "30d", "perm");
+            int next = (durations.indexOf(duration) + 1) % durations.size();
+            data.set("presets." + id + ".duration", durations.get(next));
+            save(); openPresetEditor(player, id);
+        }));
+        options.add(new PopupMenuManager.MenuOption("Banhammer geben", "Erstellt einen Hammer für dieses Preset",
+                () -> { handleHammer(player, new String[]{id}); openPresetEditor(player, id); }));
+        options.add(new PopupMenuManager.MenuOption("Preset löschen", "Löschen bestätigen",
+                () -> openPresetDeleteConfirm(player, id)));
+        options.add(new PopupMenuManager.MenuOption("« Zurück", "Zur Preset-Auswahl", () -> openPresetMenu(player)));
+        plugin.popupMenuManager().showMenu(player, "Preset: " + id, "Bearbeite die Straf-Einstellungen.", options);
     }
 
     private void openPresetDeleteConfirm(Player player, String id) {
-        Inventory inv = Bukkit.createInventory(new PresetHolder(), 27, GuiStyle.title("Preset löschen?"));
-        inv.setItem(11, presetItem(Material.LIME_CONCRETE, "&aJa, löschen", "&7Preset: " + id, "delete-confirm:" + id));
-        inv.setItem(15, presetItem(Material.RED_CONCRETE, "&cAbbrechen", "", "open:" + id));
-        GuiStyle.frame(inv);
-        player.openInventory(inv);
+        List<PopupMenuManager.MenuOption> options = List.of(
+                new PopupMenuManager.MenuOption("Ja, löschen", "Preset " + id + " endgültig löschen", () -> {
+                    data.set("presets." + id, null); save();
+                    player.sendMessage(color("&aPreset &f" + id + " &awurde gelöscht."));
+                    openPresetMenu(player);
+                }),
+                new PopupMenuManager.MenuOption("Abbrechen", "Zurück zum Preset", () -> openPresetEditor(player, id))
+        );
+        plugin.popupMenuManager().showMenu(player, "Preset löschen?", "Soll " + id + " wirklich gelöscht werden?", options);
     }
 
     private ItemStack presetItem(Material material, String title, String lore, String action) {
@@ -407,37 +419,39 @@ public final class ModerationManager implements Listener {
     private int[] vanishSlots() { return new int[]{10,11,12,13,14,15,16,19,20,21,22,23,24,25,28,29,30,31,32,33,34,37,38,39,40,41,42,43}; }
 
     private void openVisibilityRanks(Player player) {
-        List<String> ranks = ranks();
-        Inventory inv = Bukkit.createInventory(new VanishHolder(), 54, GuiStyle.title("Vanish: Zuschauer-Rang"));
-        int[] slots = vanishSlots();
-        for (int i = 0; i < Math.min(slots.length, ranks.size()); i++) {
-            String rank = ranks.get(i);
-            inv.setItem(slots[i], vanishItem(Material.PLAYER_HEAD, "&cZuschauer: " + rank, "&7Klicken: auswählen", "viewer:" + rank));
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        for (String rank : ranks()) {
+            options.add(new PopupMenuManager.MenuOption(rank,
+                    "Festlegen, welche Vanish-Ränge dieser Rang sehen darf",
+                    () -> openVisibilityTargets(player, rank)));
         }
-        inv.setItem(49, vanishItem(Material.BARRIER, "&cSchließen", "", "close"));
-        GuiStyle.frame(inv);
-        player.openInventory(inv);
+        plugin.popupMenuManager().showMenu(player, "Vanish – Zuschauer-Rang",
+                "Wähle den Rang des Zuschauers.", options);
     }
 
     private void openVisibilityTargets(Player player, String viewerRank) {
-        List<String> ranks = ranks();
-        Inventory inv = Bukkit.createInventory(new VanishHolder(), 54, GuiStyle.title("Vanish: " + viewerRank));
-        List<String> targets = new ArrayList<>(ranks);
+        List<String> targets = new ArrayList<>(ranks());
         targets.add("*");
-        int[] slots = vanishSlots();
-        for (int i = 0; i < Math.min(slots.length, targets.size()); i++) {
-            String target = targets.get(i);
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        for (String target : targets) {
             boolean allowed = data.getBoolean("visibility." + viewerRank + "." + target,
                     target.equals("*") ? false : data.getBoolean("visibility." + viewerRank + ".*", false));
-            String label = target.equals("*") ? "Alle Ränge (Standard)" : "Vanish-Rang: " + target;
-            inv.setItem(slots[i], vanishItem(allowed ? Material.LIME_DYE : Material.GRAY_DYE,
-                    (allowed ? "&aSichtbar: " : "&cVersteckt: ") + label,
-                    "&7Klicken zum Umschalten", "toggle:" + viewerRank + ":" + target));
+            String label = target.equals("*") ? "Alle Ränge (Standard)" : target;
+            options.add(new PopupMenuManager.MenuOption((allowed ? "§a✓ Sichtbar: " : "§c✗ Versteckt: ") + label,
+                    "Tippen zum Umschalten",
+                    () -> {
+                        String path = "visibility." + viewerRank + "." + target;
+                        data.set(path, !data.getBoolean(path, target.equals("*")
+                                ? false : data.getBoolean("visibility." + viewerRank + ".*", false)));
+                        save();
+                        for (Player online : Bukkit.getOnlinePlayers()) syncViewer(online);
+                        openVisibilityTargets(player, viewerRank);
+                    }));
         }
-        inv.setItem(45, vanishItem(Material.ARROW, "&c« Zuschauer-Ränge", "", "back"));
-        inv.setItem(49, vanishItem(Material.BARRIER, "&cSchließen", "", "close"));
-        GuiStyle.frame(inv);
-        player.openInventory(inv);
+        options.add(new PopupMenuManager.MenuOption("« Zuschauer-Ränge", "Zur Rang-Auswahl",
+                () -> openVisibilityRanks(player)));
+        plugin.popupMenuManager().showMenu(player, "Vanish – " + viewerRank,
+                "Lege fest, wer diesen Vanish-Rang sehen kann.", options);
     }
 
     private ItemStack vanishItem(Material material, String name, String lore, String action) {
