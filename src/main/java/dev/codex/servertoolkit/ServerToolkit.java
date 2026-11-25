@@ -38,6 +38,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     private EconomyManager economyManager;
     private PlayerFeaturesManager playerFeaturesManager;
     private NetworkSyncManager networkSyncManager;
+    private RedeemCodeManager redeemCodeManager;
     private final Map<java.util.UUID, Long> rtpCooldowns = new HashMap<>();
 
     @Override
@@ -56,6 +57,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         playerFeaturesManager = new PlayerFeaturesManager(this);
         utilityManager = new UtilityManager(this);
         networkSyncManager = new NetworkSyncManager(this);
+        redeemCodeManager = new RedeemCodeManager(this);
         marketManager = new MarketManager(this);
         kitManager = new KitManager(this);
         moderationManager = new ModerationManager(this);
@@ -64,7 +66,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         WorldSpawnManager worldSpawnManager = new WorldSpawnManager();
         for (String name : new String[]{"spawn", "setspawn", "sethome", "home", "homes", "delhome", "rtp", "clan", "clanduel", "mace",
                 "fly", "god", "invsee", "echest", "ecsee", "trash", "ranks", "rank", "voice", "ah", "order", "orders", "kit",
-                "ban", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "servers", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny"}) {
+                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "servers", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode"}) {
             getCommand(name).setExecutor(this);
         }
         getCommand("sit").setExecutor(sitManager);
@@ -83,6 +85,8 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         switch (command.getName().toLowerCase(java.util.Locale.ROOT)) {
+            case "code" -> { redeemCodeManager.handleRedeem(sender, args); return true; }
+            case "setcode" -> { redeemCodeManager.handleCreate(sender, args); return true; }
             case "ban" -> { moderationManager.handleBan(sender, args); return true; }
             case "punish" -> { moderationManager.handlePunish(sender, args); return true; }
             case "banpreset" -> { moderationManager.handlePreset(sender, args); return true; }
