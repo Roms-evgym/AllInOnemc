@@ -186,13 +186,20 @@ final class ContentToolsManager implements Listener {
         applyNick(target, sender);
     }
 
+    private boolean isNickInUse(String candidate) {
+        for (NickSession session : nickSessions.values()) {
+            if (session.nick.equalsIgnoreCase(candidate)) return true;
+        }
+        return false;
+    }
+
     private void applyNick(Player player, CommandSender sender) {
         String nick;
         int tries = 0;
         do {
             nick = NICKS.get(ThreadLocalRandom.current().nextInt(NICKS.size()));
             tries++;
-        } while (tries < 30 && (Bukkit.getPlayerExact(nick) != null || nickSessions.values().stream().anyMatch(s -> s.nick.equalsIgnoreCase(nick))));
+        } while (tries < 30 && (Bukkit.getPlayerExact(nick) != null || isNickInUse(nick)));
         String selectedNick = nick;
         NickSession old = nickSessions.get(player.getUniqueId());
         PlayerProfile original = old == null ? player.getPlayerProfile() : old.originalProfile;
