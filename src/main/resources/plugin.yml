@@ -8,6 +8,12 @@ commands:
   menu:
     description: Öffnet das plattformübergreifende Server-Popup-Menü.
     usage: /menu
+  bounty:
+    description: Setzt oder zeigt ein serverübergreifendes Kopfgeld.
+    usage: /bounty <Spieler> [Betrag]
+  playtime:
+    description: Zeigt die serverübergreifende Spielzeit.
+    usage: /playtime [Spieler]
   spawn:
     description: Teleportiert zum Server-Spawn.
     usage: /spawn
