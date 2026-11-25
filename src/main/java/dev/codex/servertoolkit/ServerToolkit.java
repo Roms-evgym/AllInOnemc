@@ -84,6 +84,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         switch (command.getName().toLowerCase(java.util.Locale.ROOT)) {
             case "ban" -> { moderationManager.handleBan(sender, args); return true; }
+            case "punish" -> { moderationManager.handlePunish(sender, args); return true; }
             case "banpreset" -> { moderationManager.handlePreset(sender, args); return true; }
             case "banrank" -> { moderationManager.handleBanRanks(sender); return true; }
             case "money" -> { economyManager.handle(sender, args); return true; }
