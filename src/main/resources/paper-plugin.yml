@@ -207,6 +207,12 @@ permissions:
   servertoolkit.eco.admin:
     description: Darf ServerToolkit-Guthaben verwalten.
     default: op
+  servertoolkit.command.lag:
+    description: Darf Lag-Content-Anfragen annehmen oder ablehnen.
+    default: true
+  servertoolkit.command.crash:
+    description: Darf Crash-Content-Anfragen annehmen oder ablehnen.
+    default: true
   servertoolkit.lag:
     description: Darf zustimmungsbasierte Lag-Content-Simulationen starten.
     default: op
