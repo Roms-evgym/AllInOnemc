@@ -50,14 +50,14 @@ public final class MarketManager implements CommandExecutor, Listener {
             sender.sendMessage("Dieser Befehl ist nur im Spiel verfügbar.");
             return true;
         }
-        if (command.getName().equalsIgnoreCase("ah")) {
+        if (label.equalsIgnoreCase("ah")) {
             if (args.length == 0) openAuctionHouse(player);
             else if (args[0].equalsIgnoreCase("sell")) createListing(player, args);
             else if (args[0].equalsIgnoreCase("cancel")) cancelListing(player, args);
             else help(player);
             return true;
         }
-        if (command.getName().equalsIgnoreCase("orders")) {
+        if (label.equalsIgnoreCase("orders")) {
             showOrders(player);
             return true;
         }
