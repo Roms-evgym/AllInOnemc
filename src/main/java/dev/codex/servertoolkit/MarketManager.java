@@ -99,28 +99,46 @@ public final class MarketManager implements CommandExecutor, Listener {
 
     private void openAuctionHouse(Player player) {
         ConfigurationSection auctions = data.getConfigurationSection("auctions");
-        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        AuctionHolder holder = new AuctionHolder();
+        Inventory inventory = Bukkit.createInventory(holder, 54, color("&6&lAuktionshaus"));
+        holder.inventory = inventory;
         if (auctions != null) {
             List<String> ids = new ArrayList<>(auctions.getKeys(false));
             ids.sort((left, right) -> Integer.compare(parseAuctionId(right), parseAuctionId(left)));
+            int slot = 0;
             for (String id : ids) {
+                if (slot >= 54) break;
                 ItemStack item = readItem("auctions." + id + ".item");
                 if (item == null) continue;
                 String seller = data.getString("auctions." + id + ".sellerName", "Unbekannt");
                 double price = data.getDouble("auctions." + id + ".price");
-                String itemName = item.hasItemMeta() && item.getItemMeta().hasDisplayName()
-                        ? ChatColor.stripColor(item.getItemMeta().getDisplayName()) : item.getType().name();
-                options.add(new PopupMenuManager.MenuOption("#" + id + " • " + itemName,
-                        "Verkäufer: " + seller + " | Preis: " + price + " Coins | Menge: " + item.getAmount(),
-                        () -> buyListing(player, id)));
+                ItemStack display = item.clone();
+                ItemMeta meta = display.getItemMeta();
+                List<String> lore = meta != null && meta.hasLore() ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
+                lore.add(color("&7Verkäufer: &f" + seller));
+                lore.add(color("&7Preis: &6" + price + " Coins"));
+                lore.add(color("&eKlicken zum Kaufen"));
+                if (meta != null) { meta.setLore(lore); display.setItemMeta(meta); }
+                inventory.setItem(slot, display);
+                holder.listings.put(slot, id);
+                slot++;
             }
         }
-        if (options.isEmpty()) {
+        if (holder.listings.isEmpty()) {
             player.sendMessage(color("&7Es gibt derzeit keine Auktionen."));
             return;
         }
-        plugin.popupMenuManager().showMenu(player, "AllInOneMC – Auktionshaus",
-                "Wähle ein Angebot zum Kaufen.", options);
+        player.openInventory(inventory);
+    }
+
+    @EventHandler
+    public void onOrdersClick(InventoryClickEvent event) {
+        if (!(event.getView().getTopInventory().getHolder() instanceof OrdersHolder holder)) return;
+        event.setCancelled(true);
+        if (!(event.getWhoClicked() instanceof Player player) || event.getRawSlot() < 0
+                || event.getRawSlot() >= event.getView().getTopInventory().getSize()) return;
+        String id = holder.orders.get(event.getRawSlot());
+        if (id != null) fillOrder(player, new String[]{"fill", id});
     }
 
     private int parseAuctionId(String value) {
@@ -236,26 +254,36 @@ public final class MarketManager implements CommandExecutor, Listener {
 
     private void showOrders(Player player) {
         ConfigurationSection orders = data.getConfigurationSection("orders");
-        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        OrdersHolder holder = new OrdersHolder();
+        Inventory inventory = Bukkit.createInventory(holder, 54, color("&6&lSpieler-Aufträge"));
+        holder.inventory = inventory;
         if (orders != null) {
             List<String> ids = new ArrayList<>(orders.getKeys(false));
             ids.sort((left, right) -> Integer.compare(parseAuctionId(right), parseAuctionId(left)));
+            int slot = 0;
             for (String id : ids) {
+                if (slot >= 54) break;
                 String path = "orders." + id;
                 String owner = data.getString(path + ".ownerName", "Spieler");
-                String material = data.getString(path + ".material", "UNKNOWN");
+                Material material = Material.matchMaterial(data.getString(path + ".material", "STONE"));
+                if (material == null || !material.isItem()) material = Material.PAPER;
                 int amount = data.getInt(path + ".amount");
                 double reward = data.getDouble(path + ".reward");
-                options.add(new PopupMenuManager.MenuOption("#" + id + " • " + amount + "x " + material,
-                        "Von " + owner + " | Belohnung: " + reward + " Coins",
-                        () -> fillOrder(player, new String[]{"fill", id})));
+                ItemStack display = new ItemStack(material, Math.max(1, Math.min(64, amount)));
+                ItemMeta meta = display.getItemMeta();
+                meta.setDisplayName(color("&e#" + id + " &f" + amount + "x " + material.name()));
+                meta.setLore(List.of(color("&7Von: &f" + owner), color("&7Belohnung: &6" + reward + " Coins"), color("&aKlicken zum Erfüllen")));
+                display.setItemMeta(meta);
+                inventory.setItem(slot, display);
+                holder.orders.put(slot, id);
+                slot++;
             }
         }
-        if (options.isEmpty()) {
+        if (holder.orders.isEmpty()) {
             player.sendMessage(color("&7Keine offenen Aufträge. Erstelle einen mit &f/order create"));
             return;
         }
-        plugin.popupMenuManager().showMenu(player, "Spieler-Aufträge", "Wähle einen Auftrag zum Erfüllen.", options);
+        player.openInventory(inventory);
     }
 
     private void fillOrder(Player player, String[] args) {
@@ -359,6 +387,11 @@ public final class MarketManager implements CommandExecutor, Listener {
     private static final class AuctionHolder implements InventoryHolder {
         private Inventory inventory;
         private final Map<Integer, String> listings = new HashMap<>();
+        @Override public Inventory getInventory() { return inventory; }
+    }
+    private static final class OrdersHolder implements InventoryHolder {
+        private Inventory inventory;
+        private final Map<Integer, String> orders = new HashMap<>();
         @Override public Inventory getInventory() { return inventory; }
     }
 }
