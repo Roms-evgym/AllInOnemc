@@ -354,7 +354,7 @@ public final class UtilityManager implements CommandExecutor, Listener {
             plugin.getConfig().set("ranks." + id + ".weight", Math.min(1000, weight + 1));
             plugin.saveConfig(); openRankEditor(player, id);
         }));
-        options.add(new PopupMenuManager.MenuOption("Alle Plugin- und Vanilla-Rechte", "Registrierte Permission-Nodes anzeigen",
+        options.add(new PopupMenuManager.MenuOption("Alle Minecraft-, Paper- und Plugin-Rechte", "Alle registrierten Permission-Nodes anzeigen",
                 () -> openVanillaPermissionMenu(player, id, 0)));
         options.add(new PopupMenuManager.MenuOption("Eigenes Recht hinzufügen", "Permission-Node im Chat eingeben",
                 () -> promptRankInput(player, "permission", id)));
@@ -392,13 +392,29 @@ public final class UtilityManager implements CommandExecutor, Listener {
     private void openVanillaPermissionMenu(Player player, String id, int page) {
         if (!canManageRanks(player) || !plugin.getConfig().isConfigurationSection("ranks." + id)) return;
         List<String> nodes = new ArrayList<>(Bukkit.getPluginManager().getPermissions().stream().map(Permission::getName).toList());
+        nodes.addAll(plugin.getConfig().getStringList("ranks." + id + ".permissions"));
         nodes.addAll(List.of("minecraft.command.help", "minecraft.command.list", "minecraft.command.me",
                 "minecraft.command.msg", "minecraft.command.say", "minecraft.command.teleport",
                 "minecraft.command.gamemode", "minecraft.command.give", "minecraft.command.effect",
                 "minecraft.command.enchant", "minecraft.command.time", "minecraft.command.weather",
                 "minecraft.command.clear", "minecraft.command.kick", "minecraft.command.ban",
                 "minecraft.command.pardon", "minecraft.command.op", "minecraft.command.deop",
-                "minecraft.command.whitelist", "minecraft.command.stop", "minecraft.command.save-all"));
+                "minecraft.command.whitelist", "minecraft.command.stop", "minecraft.command.save-all",
+                "bukkit.command.help", "bukkit.command.plugins", "bukkit.command.version", "bukkit.command.reload",
+                "paper.command.version", "paper.command.heap", "paper.command.entity", "paper.command.mobcaps",
+                "minecraft.command.advancement", "minecraft.command.attribute", "minecraft.command.bossbar",
+                "minecraft.command.clone", "minecraft.command.damage", "minecraft.command.data", "minecraft.command.datapack",
+                "minecraft.command.debug", "minecraft.command.defaultgamemode", "minecraft.command.difficulty",
+                "minecraft.command.fill", "minecraft.command.forceload", "minecraft.command.function",
+                "minecraft.command.item", "minecraft.command.locate", "minecraft.command.locatebiome",
+                "minecraft.command.particle", "minecraft.command.place", "minecraft.command.playsound",
+                "minecraft.command.recipe", "minecraft.command.return", "minecraft.command.ride",
+                "minecraft.command.rotate", "minecraft.command.schedule", "minecraft.command.scoreboard",
+                "minecraft.command.setblock", "minecraft.command.setworldspawn", "minecraft.command.spawnpoint",
+                "minecraft.command.spectate", "minecraft.command.spreadplayers", "minecraft.command.summon",
+                "minecraft.command.tag", "minecraft.command.team", "minecraft.command.teammsg",
+                "minecraft.command.title", "minecraft.command.trigger", "minecraft.command.waypoint",
+                "minecraft.command.worldborder"));
         nodes = nodes.stream().filter(node -> node != null && node.matches("[a-zA-Z0-9_.:-]+"))
                 .distinct().sorted(String.CASE_INSENSITIVE_ORDER).toList();
         int pageSize = 24;
