@@ -34,10 +34,7 @@ public final class ClanManager {
     }
 
     public void handle(Player player, String[] args) {
-        if (args.length == 0) {
-            help(player);
-            return;
-        }
+        if (args.length == 0) { openGui(player); return; }
         switch (args[0].toLowerCase(Locale.ROOT)) {
             case "gui" -> openGui(player);
             case "create" -> create(player, args);
