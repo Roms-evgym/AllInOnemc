@@ -8,7 +8,7 @@ dependencies:
   server:
     floodgate:
       load: BEFORE
-      required: false
+      required: true
       join-classpath: true
 permissions:
   servertoolkit.menu.open:
