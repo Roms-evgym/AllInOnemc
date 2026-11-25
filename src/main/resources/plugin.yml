@@ -53,7 +53,7 @@ commands:
     usage: /tpdeny
   clan:
     description: Clan-System
-    usage: /clan
+    usage: /clan [gui|create|invite|accept|leave|disband|info|chat|top]
   mace:
     description: Mace-Duelle, Statistiken und Turniere
     usage: /mace
@@ -103,7 +103,7 @@ commands:
     usage: /orders
   kit:
     description: Öffnet das Kit-Menü oder verwaltet Kits.
-    usage: /kit [claim|create|delete|cooldown]
+    usage: /kit [claim|create|delete|cooldown|access]
   code:
     description: Löst einen Belohnungscode ein.
     usage: /code <Code>
