@@ -94,10 +94,6 @@ public final class MaceManager implements CommandExecutor, Listener {
             challenger.sendMessage(color("&cNutzung: /mace duel <Spieler>"));
             return;
         }
-        if (!arenasReady()) {
-            challenger.sendMessage(color("&cDie Mace-Arena ist noch nicht eingerichtet."));
-            return;
-        }
         Player target = Bukkit.getPlayerExact(args[1]);
         if (target == null || target.equals(challenger)) {
             challenger.sendMessage(color("&cSpieler nicht gefunden."));
@@ -239,12 +235,18 @@ public final class MaceManager implements CommandExecutor, Listener {
     }
 
     private boolean startMatch(Player a, Player b, boolean tournament) {
-        Location pointA = loadLocation("mace.arena.a");
-        Location pointB = loadLocation("mace.arena.b");
-        if (pointA == null || pointB == null || activeMatches.containsKey(a.getUniqueId()) || activeMatches.containsKey(b.getUniqueId())) {
+        if (activeMatches.containsKey(a.getUniqueId()) || activeMatches.containsKey(b.getUniqueId())) {
             a.sendMessage(color("&cDas Duell konnte nicht gestartet werden."));
             return false;
         }
+        Location[] duelSpawns = findRandomDuelSpawns();
+        if (duelSpawns == null) {
+            a.sendMessage(color("&cKein sicherer zufälliger Duell-Ort gefunden. Prüfe Welt und WorldBorder."));
+            b.sendMessage(color("&cKein sicherer zufälliger Duell-Ort gefunden. Prüfe Welt und WorldBorder."));
+            return false;
+        }
+        Location pointA = duelSpawns[0];
+        Location pointB = duelSpawns[1];
         Match match = new Match(a, b, tournament);
         activeMatches.put(a.getUniqueId(), match);
         activeMatches.put(b.getUniqueId(), match);
@@ -402,6 +404,40 @@ public final class MaceManager implements CommandExecutor, Listener {
             player.sendMessage(color("&e" + (i + 1) + ". &f" + stats.getString("players." + id + ".name", "Unbekannt")
                     + " &7- &a" + stats.getInt("players." + id + ".wins") + " Siege"));
         }
+    }
+
+    private Location[] findRandomDuelSpawns() {
+        String worldName = plugin.getConfig().getString("mace.random-world",
+                plugin.getConfig().getString("rtp.worlds.survival", "world"));
+        World world = Bukkit.getWorld(worldName);
+        if (world == null) return null;
+        var border = world.getWorldBorder();
+        Location borderCenter = border.getCenter();
+        double half = Math.max(32.0, border.getSize() / 2.0 - 32.0);
+        java.util.concurrent.ThreadLocalRandom random = java.util.concurrent.ThreadLocalRandom.current();
+        for (int attempt = 0; attempt < 120; attempt++) {
+            int x = (int) Math.floor(borderCenter.getX() + random.nextDouble(-half, half));
+            int z = (int) Math.floor(borderCenter.getZ() + random.nextDouble(-half, half));
+            Location a = safeDuelLocation(world, x - 5, z);
+            Location b = safeDuelLocation(world, x + 5, z);
+            if (a != null && b != null && border.isInside(a) && border.isInside(b)) return new Location[]{a, b};
+        }
+        return null;
+    }
+
+    private Location safeDuelLocation(World world, int x, int z) {
+        int y = world.getHighestBlockYAt(x, z);
+        if (y <= world.getMinHeight() || y + 2 >= world.getMaxHeight()) return null;
+        var floor = world.getBlockAt(x, y, z);
+        var feet = world.getBlockAt(x, y + 1, z);
+        var head = world.getBlockAt(x, y + 2, z);
+        if (!floor.getType().isSolid() || floor.isLiquid() || feet.isLiquid() || head.isLiquid()
+                || feet.getType().isSolid() || head.getType().isSolid()) return null;
+        Material type = floor.getType();
+        if (type == Material.MAGMA_BLOCK || type == Material.CACTUS || type == Material.FIRE
+                || type == Material.SOUL_FIRE || type == Material.CAMPFIRE || type == Material.SOUL_CAMPFIRE
+                || type == Material.LAVA) return null;
+        return new Location(world, x + 0.5, y + 1, z + 0.5);
     }
 
     private boolean arenasReady() { return loadLocation("mace.arena.a") != null && loadLocation("mace.arena.b") != null; }
