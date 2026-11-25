@@ -600,10 +600,12 @@ public final class UtilityManager implements CommandExecutor, Listener {
         if (player == null) return;
         String id = getRankId(player);
         String prefix = rankPrefix(id);
+        String nick = plugin.contentToolsManager() == null ? null : plugin.contentToolsManager().nickName(player);
         String clan = plugin.clanManager() == null ? null : plugin.clanManager().clanName(player.getUniqueId());
         String clanTag = clan == null || clan.isBlank() ? "" : color(" &8[&e" + clan + "&8]");
-        player.setPlayerListName(prefix + player.getName() + clanTag);
-        player.setDisplayName(prefix + player.getName() + clanTag);
+        String shownName = nick == null ? prefix + player.getName() + clanTag : nick;
+        player.setPlayerListName(shownName);
+        player.setDisplayName(shownName);
         PermissionAttachment previous = rankAttachments.remove(player.getUniqueId());
         if (previous != null) previous.remove();
         PermissionAttachment attachment = player.addAttachment(plugin);
@@ -619,7 +621,10 @@ public final class UtilityManager implements CommandExecutor, Listener {
         Objective objective = board.registerNewObjective("stinfo", "dummy", color(plugin.getConfig().getString("scoreboard.title", "&6&lAllInOne Survival")));
         objective.setDisplaySlot(DisplaySlot.SIDEBAR);
         String prefix = rankPrefix(getRankId(player));
-        String[] lines = {"&7", "&fRang: " + prefix, "&fWelt: &a" + player.getWorld().getName(), "&1", "&6Geld: &f" + plugin.economyManager().formatted(player.getUniqueId()), "&fSpielzeit: &b" + plugin.playtimeManager().format(plugin.playtimeManager().liveSeconds(player)), "&fKopfgeld: &e" + String.format(java.util.Locale.GERMANY, "%.2f", plugin.bountyManager().bounty(player.getUniqueId())) + " Coins", "&8"};
+        boolean nicked = plugin.contentToolsManager() != null && plugin.contentToolsManager().nickName(player) != null;
+        String[] lines = nicked
+                ? new String[]{"&7", "&fWelt: &a" + player.getWorld().getName(), "&1", "&6Geld: &f" + plugin.economyManager().formatted(player.getUniqueId()), "&fSpielzeit: &b" + plugin.playtimeManager().format(plugin.playtimeManager().liveSeconds(player)), "&fKopfgeld: &e" + String.format(java.util.Locale.GERMANY, "%.2f", plugin.bountyManager().bounty(player.getUniqueId())) + " Coins", "&8"}
+                : new String[]{"&7", "&fRang: " + prefix, "&fWelt: &a" + player.getWorld().getName(), "&1", "&6Geld: &f" + plugin.economyManager().formatted(player.getUniqueId()), "&fSpielzeit: &b" + plugin.playtimeManager().format(plugin.playtimeManager().liveSeconds(player)), "&fKopfgeld: &e" + String.format(java.util.Locale.GERMANY, "%.2f", plugin.bountyManager().bounty(player.getUniqueId())) + " Coins", "&8"};
         int score = lines.length; for (String line : lines) objective.getScore(color(line)).setScore(score--);
         player.setScoreboard(board);
     }
