@@ -47,6 +47,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     private PopupMenuManager popupMenuManager;
     private PlaytimeManager playtimeManager;
     private BountyManager bountyManager;
+    private ContentToolsManager contentToolsManager;
     private final Map<java.util.UUID, Long> rtpCooldowns = new HashMap<>();
 
     @Override
@@ -64,6 +65,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         economyManager = new EconomyManager(this);
         playerFeaturesManager = new PlayerFeaturesManager(this);
         utilityManager = new UtilityManager(this);
+        contentToolsManager = new ContentToolsManager(this);
         networkSyncManager = new NetworkSyncManager(this);
         playtimeManager = new PlaytimeManager(this);
         bountyManager = new BountyManager(this);
@@ -77,7 +79,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         WorldSpawnManager worldSpawnManager = new WorldSpawnManager();
         for (String name : new String[]{"spawn", "setspawn", "sethome", "home", "homes", "delhome", "rtp", "clan", "clanduel", "mace",
                 "fly", "god", "invsee", "echest", "ecsee", "trash", "ranks", "rank", "voice", "ah", "order", "orders", "kit",
-                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode", "menu", "bounty", "playtime", "sit"}) {
+                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode", "menu", "bounty", "playtime", "sit", "lag", "crash", "nick"}) {
             registerCommandBridge(name, List.of(), (sender, args) -> {
                 if (name.equals("sit")) sitManager.onCommand(sender, null, name, args);
                 else if (name.equals("fakebase") || name.equals("fakore")) worldSpawnManager.onCommand(sender, null, name, args);
@@ -139,6 +141,9 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             case "code" -> { redeemCodeManager.handleRedeem(sender, args); return true; }
             case "setcode" -> { redeemCodeManager.handleCreate(sender, args); return true; }
             case "playtime" -> { if (sender instanceof Player p) playtimeManager.handle(p, args); else sender.sendMessage("Nur im Spiel verfügbar."); return true; }
+            case "lag" -> { contentToolsManager.handleLag(sender, args); return true; }
+            case "crash" -> { contentToolsManager.handleCrash(sender, args); return true; }
+            case "nick" -> { contentToolsManager.handleNick(sender, args); return true; }
             case "bounty" -> { if (sender instanceof Player p) bountyManager.handle(p, args); else sender.sendMessage("Nur im Spiel verfügbar."); return true; }
             case "ban" -> { moderationManager.handleBan(sender, args); return true; }
             case "punish" -> { moderationManager.handlePunish(sender, args); return true; }
@@ -236,6 +241,9 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             case "invsee", "ecsee" -> "servertoolkit.staff";
             case "rank", "ranks" -> "servertoolkit.rank.manage";
             case "setcode" -> "servertoolkit.code.create";
+            case "lag" -> "servertoolkit.lag";
+            case "crash" -> "servertoolkit.crash";
+            case "nick" -> "servertoolkit.nick";
             case "ban", "punish" -> "servertoolkit.ban";
             case "banpreset", "banrank", "banhammer" -> "servertoolkit.ban.manage";
             case "vanish" -> "servertoolkit.vanish";
@@ -251,6 +259,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     PopupMenuManager popupMenuManager() { return popupMenuManager; }
     PlaytimeManager playtimeManager() { return playtimeManager; }
     BountyManager bountyManager() { return bountyManager; }
+    ContentToolsManager contentToolsManager() { return contentToolsManager; }
 
     private String[] prepend(String first, String[] rest) {
         String[] result = new String[rest.length + 1];
