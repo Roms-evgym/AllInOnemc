@@ -70,17 +70,44 @@ public final class ModerationManager implements Listener {
         }, 20L, 20L);
     }
 
+    // /ban behaves like the vanilla permanent ban command.
     public void handleBan(CommandSender sender, String[] args) {
         if (!sender.hasPermission("servertoolkit.ban")) { deny(sender); return; }
-        if (args.length < 2) { sender.sendMessage(color("&cNutzung: /ban <Spieler> <Preset>")); return; }
+        if (args.length < 1) { sender.sendMessage(color("&cNutzung: /ban <Spieler> [Grund ...]")); return; }
+        OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
+        if (sender instanceof Player player && !canBanRank(player, target)) {
+            String targetRank = plugin.utilityManager().rankId(target);
+            sender.sendMessage(color("&cDein Rang darf den Rang &f" +
+                    plugin.getConfig().getString("ranks." + targetRank + ".display", targetRank) +
+                    " &cnicht bannen."));
+            return;
+        }
+        String reason = args.length > 1
+                ? String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length))
+                : "Gebannt";
+        String message = color("&cDu wurdest gebannt.\\n&7Grund: &f" + reason);
+        Bukkit.getBanList(BanList.Type.NAME).addBan(args[0], ChatColor.stripColor(reason), null, sender.getName());
+        Player online = Bukkit.getPlayerExact(args[0]);
+        if (online != null) online.kickPlayer(message);
+        sender.sendMessage(color("&a" + args[0] + " wurde permanent gebannt. &7Grund: &f" + reason));
+    }
+
+    // /punish keeps the former preset-based punishment workflow.
+    public void handlePunish(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("servertoolkit.ban")) { deny(sender); return; }
+        if (args.length < 2) { sender.sendMessage(color("&cNutzung: /punish <Spieler> <Preset>")); return; }
         String id = normalize(args[1]);
-        if (id == null || !data.isConfigurationSection("presets." + id)) { sender.sendMessage(color("&cDieses Ban-Preset gibt es nicht.")); return; }
+        if (id == null || !data.isConfigurationSection("presets." + id)) {
+            sender.sendMessage(color("&cDieses Straf-Preset gibt es nicht."));
+            return;
+        }
         if (sender instanceof Player player) {
             OfflinePlayer target = Bukkit.getOfflinePlayer(args[0]);
             if (!canBanRank(player, target)) {
+                String targetRank = plugin.utilityManager().rankId(target);
                 sender.sendMessage(color("&cDein Rang darf den Rang &f" +
-                        plugin.getConfig().getString("ranks." + plugin.utilityManager().rankId(target) + ".display", plugin.utilityManager().rankId(target)) +
-                        " &cnicht bannen."));
+                        plugin.getConfig().getString("ranks." + targetRank + ".display", targetRank) +
+                        " &cnicht bestrafen."));
                 return;
             }
         }
