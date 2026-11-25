@@ -225,14 +225,12 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
         String worldName = plugin.getConfig().getString("rtp.worlds." + dimension, "world");
         World world = Bukkit.getWorld(worldName);
         if (world == null) { player.sendMessage(color("&cDie Welt &f" + worldName + " &cist nicht geladen.")); return; }
-        int min = Math.max(0, plugin.getConfig().getInt("rtp.min-radius", 500));
-        int max = Math.max(min + 1, plugin.getConfig().getInt("rtp.max-radius", 5000));
-        Location center = world.getSpawnLocation();
+        // No artificial RTP radius: sample the full usable area inside the world's own border.
+        Location center = world.getWorldBorder().getCenter();
+        double halfBorder = Math.max(32.0, world.getWorldBorder().getSize() / 2.0 - 16.0);
         for (int attempt = 0; attempt < 60; attempt++) {
-            double angle = ThreadLocalRandom.current().nextDouble(0, Math.PI * 2);
-            int radius = ThreadLocalRandom.current().nextInt(min, max + 1);
-            int x = center.getBlockX() + (int) Math.round(Math.cos(angle) * radius);
-            int z = center.getBlockZ() + (int) Math.round(Math.sin(angle) * radius);
+            int x = (int) Math.floor(center.getX() + ThreadLocalRandom.current().nextDouble(-halfBorder, halfBorder));
+            int z = (int) Math.floor(center.getZ() + ThreadLocalRandom.current().nextDouble(-halfBorder, halfBorder));
             Location candidate = dimension.equals("nether") ? safeNetherLocation(world, x, z) : safeSurfaceLocation(world, x, z);
             if (candidate == null) continue;
             player.closeInventory();
