@@ -158,6 +158,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     }
 
     UtilityManager utilityManager() { return utilityManager; }
+    ClanManager clanManager() { return clanManager; }
     EconomyManager economyManager() { return economyManager; }
     NetworkSyncManager networkSyncManager() { return networkSyncManager; }
 
