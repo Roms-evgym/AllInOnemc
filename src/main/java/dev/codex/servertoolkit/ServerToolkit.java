@@ -77,7 +77,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         WorldSpawnManager worldSpawnManager = new WorldSpawnManager();
         for (String name : new String[]{"spawn", "setspawn", "sethome", "home", "homes", "delhome", "rtp", "clan", "clanduel", "mace",
                 "fly", "god", "invsee", "echest", "ecsee", "trash", "ranks", "rank", "voice", "ah", "order", "orders", "kit",
-                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "servers", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode", "menu", "bounty", "playtime", "sit"}) {
+                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode", "menu", "bounty", "playtime", "sit"}) {
             registerCommandBridge(name, List.of(), (sender, args) -> {
                 if (name.equals("sit")) sitManager.onCommand(sender, null, name, args);
                 else if (name.equals("fakebase") || name.equals("fakore")) worldSpawnManager.onCommand(sender, null, name, args);
