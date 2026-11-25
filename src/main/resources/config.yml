@@ -2,6 +2,11 @@
 # Für den Survival-Server: mode: SURVIVAL
 mode: SURVIVAL
 
+# Standardzustand für Content-Pranks bei Spielern ohne eigene Einstellung.
+# Spieler können sich jederzeit mit /prank off austragen.
+prank:
+  default-enabled: true
+
 # Name des Lobby-Servers in BungeeCord/Velocity; /hub und /lobby verbinden hierhin.
 proxy:
   lobby-server: Lobby
