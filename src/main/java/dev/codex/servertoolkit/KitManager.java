@@ -33,11 +33,12 @@ public final class KitManager implements Listener {
             case "create" -> create(player, args);
             case "delete" -> delete(player, args);
             case "cooldown" -> cooldown(player, args);
+            case "access" -> access(player, args);
             case "claim" -> {
                 if (args.length < 2) player.sendMessage(color("&cNutzung: /kit claim <Name>"));
                 else claim(player, normalize(args[1]));
             }
-            default -> player.sendMessage(color("&e/kit &7Menü | &e/kit claim <Name> &7Kit holen"));
+            default -> player.sendMessage(color("&e/kit &7Menü | &e/kit claim <Name> &7Kit holen | &e/kit access <Name> all|rank <Rang>|player <Spieler>"));
         }
     }
 
@@ -53,6 +54,7 @@ public final class KitManager implements Listener {
         for (int i = 0; i < armor.length; i++) data.set("kits." + id + ".armor." + i, armor[i]);
         data.set("kits." + id + ".offhand", player.getInventory().getItemInOffHand());
         if (!data.contains("kits." + id + ".cooldown-seconds")) data.set("kits." + id + ".cooldown-seconds", 86400);
+        if (!data.contains("kits." + id + ".access.type")) data.set("kits." + id + ".access.type", "all");
         save();
         player.sendMessage(color("&aKit &f" + id + " &agespeichert. Cooldown: /kit cooldown " + id + " <Sekunden> (0 = keiner)."));
     }
@@ -82,8 +84,55 @@ public final class KitManager implements Listener {
         player.sendMessage(color("&cDafür hast du keine Rechte.")); return false;
     }
 
+    private void access(Player player, String[] args) {
+        if (!manage(player)) return;
+        if (args.length < 3) {
+            player.sendMessage(color("&cNutzung: /kit access <Name> all|rank <Rang>|player <Spieler>"));
+            return;
+        }
+        String id = normalize(args[1]);
+        if (id == null || !data.contains("kits." + id)) { player.sendMessage(color("&cDieses Kit gibt es nicht.")); return; }
+        String mode = args[2].toLowerCase(Locale.ROOT);
+        String base = "kits." + id + ".access";
+        if (mode.equals("all")) {
+            data.set(base + ".type", "all"); data.set(base + ".value", null); save();
+            player.sendMessage(color("&aKit &f" + id + " &aist wieder für alle Spieler verfügbar.")); return;
+        }
+        if (mode.equals("rank") && args.length >= 4) {
+            String rank = args[3].toLowerCase(Locale.ROOT);
+            data.set(base + ".type", "rank"); data.set(base + ".value", rank); save();
+            player.sendMessage(color("&aKit &f" + id + " &akann nur noch von Rang &f" + rank + " &abeansprucht werden.")); return;
+        }
+        if (mode.equals("player") && args.length >= 4) {
+            org.bukkit.OfflinePlayer target = org.bukkit.Bukkit.getOfflinePlayer(args[3]);
+            data.set(base + ".type", "player"); data.set(base + ".value", target.getUniqueId().toString());
+            data.set(base + ".player-name", target.getName() == null ? args[3] : target.getName()); save();
+            player.sendMessage(color("&aKit &f" + id + " &akann nur noch von &f" + (target.getName() == null ? args[3] : target.getName()) + " &abeansprucht werden.")); return;
+        }
+        player.sendMessage(color("&cNutzung: /kit access <Name> all|rank <Rang>|player <Spieler>"));
+    }
+
+    private boolean canClaim(Player player, String id) {
+        String base = "kits." + id + ".access";
+        String mode = data.getString(base + ".type", "all");
+        String value = data.getString(base + ".value", "");
+        if (mode.equalsIgnoreCase("rank")) return plugin.utilityManager().rankId(player).equalsIgnoreCase(value);
+        if (mode.equalsIgnoreCase("player")) return player.getUniqueId().toString().equalsIgnoreCase(value);
+        return true;
+    }
+
+    private String accessDescription(String id) {
+        String base = "kits." + id + ".access";
+        String mode = data.getString(base + ".type", "all");
+        String value = data.getString(base + ".value", "");
+        if (mode.equalsIgnoreCase("rank")) return "Nur Rang: " + value;
+        if (mode.equalsIgnoreCase("player")) return "Nur Spieler: " + data.getString(base + ".player-name", "festgelegt");
+        return "Für alle Spieler";
+    }
+
     private void claim(Player player, String id) {
         if (id == null || !data.contains("kits." + id)) { player.sendMessage(color("&cDieses Kit gibt es nicht. Nutze /kit.")); return; }
+        if (!canClaim(player, id)) { player.sendMessage(color("&cDu hast keine Berechtigung, dieses Kit zu beanspruchen. Voraussetzung: " + accessDescription(id))); return; }
         String base = "kits." + id;
         long cooldown = data.getLong(base + ".cooldown-seconds", 86400);
         String claimPath = "claims." + player.getUniqueId() + "." + id;
@@ -117,6 +166,7 @@ public final class KitManager implements Listener {
         ids.sort(String.CASE_INSENSITIVE_ORDER);
         List<PopupMenuManager.MenuOption> options = new ArrayList<>();
         for (String id : ids) {
+            if (!canClaim(player, id)) continue;
             String path = "kits." + id;
             long seconds = data.getLong(path + ".cooldown-seconds", 86400);
             long readyAt = data.getLong("claims." + player.getUniqueId() + "." + id, 0) + seconds * 1000L;
@@ -124,9 +174,10 @@ public final class KitManager implements Listener {
                     ? "Verfügbar in " + formatTime((readyAt - System.currentTimeMillis() + 999) / 1000)
                     : "Jetzt abholbar";
             options.add(new PopupMenuManager.MenuOption(id,
-                    "Cooldown: " + (seconds == 0 ? "Keiner" : formatTime(seconds)) + " • " + state,
+                    "Zugriff: " + accessDescription(id) + " • Cooldown: " + (seconds == 0 ? "Keiner" : formatTime(seconds)) + " • " + state,
                     () -> claim(player, id)));
         }
+        if (options.isEmpty()) { player.sendMessage(color("&cEs gibt keine Kits, die du beanspruchen darfst.")); return; }
         plugin.popupMenuManager().showMenu(player, "AllInOneMC – Kits", "Wähle ein Kit zum Abholen.", options);
     }
 
