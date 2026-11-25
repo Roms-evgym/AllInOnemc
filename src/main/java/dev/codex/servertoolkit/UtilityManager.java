@@ -291,108 +291,121 @@ public final class UtilityManager implements CommandExecutor, Listener {
     }
 
     private void openRankMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(new MenuHolder("ranks"), 27, GuiStyle.title("Ränge"));
-        if (!player.hasPermission("servertoolkit.rank.manage") && !player.isOp()) {
-            player.sendMessage(color("&cDafür hast du keine Rechte.")); return;
-        }
+        if (!canManageRanks(player)) { player.sendMessage(color("&cDafür hast du keine Rechte.")); return; }
         var section = plugin.getConfig().getConfigurationSection("ranks");
         if (section == null) { player.sendMessage(color("&cEs sind keine Ränge eingerichtet.")); return; }
         List<String> ids = new ArrayList<>(section.getKeys(false));
         ids.sort(Comparator.comparingInt(id -> plugin.getConfig().getInt("ranks." + id + ".weight", 0)));
-        int[] slots = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 23, 24, 25};
-        for (int i = 0; i < Math.min(ids.size(), slots.length); i++) {
-            String id = ids.get(i);
-            ItemStack item = menuItem(Material.NAME_TAG,
-                    rankPrefix(id) + " &f" + plugin.getConfig().getString("ranks." + id + ".display", id),
-                    "&7Prefix: " + plugin.getConfig().getString("ranks." + id + ".prefix", ""), "&eKlicken zum Bearbeiten");
-            setMenuAction(item, "openrank:" + id);
-            inv.setItem(slots[i], item);
-        }
-        ItemStack create = menuItem(Material.EMERALD, "&aNeuen Rang erstellen", "&7Klicken und Rang-ID im Chat eingeben.");
-        setMenuAction(create, "newrank"); inv.setItem(22, create);
-        GuiStyle.frame(inv);
-        player.openInventory(inv);
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        for (String id : ids) options.add(new PopupMenuManager.MenuOption(
+                ChatColor.stripColor(rankPrefix(id)) + " " + plugin.getConfig().getString("ranks." + id + ".display", id),
+                "Prefix: " + plugin.getConfig().getString("ranks." + id + ".prefix", ""),
+                () -> openRankEditor(player, id)));
+        options.add(new PopupMenuManager.MenuOption("+ Neuen Rang erstellen", "Neue Rang-ID im Chat eingeben",
+                () -> promptRankInput(player, "newrank", "")));
+        plugin.popupMenuManager().showMenu(player, "Ränge verwalten", "Wähle einen Rang.", options);
     }
 
     private void openRankEditor(Player player, String id) {
         if (!canManageRanks(player) || !plugin.getConfig().isConfigurationSection("ranks." + id)) return;
-        Inventory inv = Bukkit.createInventory(new MenuHolder("rank-edit", id), 54, GuiStyle.title("Rang: " + id));
-        inv.setItem(10, actionItem(Material.NAME_TAG, "&ePrefix und Farbe ändern", "&7Im Chat eingeben.", "prefix:" + id));
-        inv.setItem(12, actionItem(Material.WRITABLE_BOOK, "&eAnzeigename ändern", "&7Im Chat eingeben.", "display:" + id));
-        inv.setItem(14, actionItem(Material.PLAYER_HEAD, "&eSpielern diesen Rang geben", "&7Online-Spieler auswählen.", "assign:" + id));
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        options.add(new PopupMenuManager.MenuOption("Prefix und Farbe ändern", "Neuen Prefix im Chat eingeben",
+                () -> promptRankInput(player, "prefix", id)));
+        options.add(new PopupMenuManager.MenuOption("Anzeigename ändern", "Neuen Namen im Chat eingeben",
+                () -> promptRankInput(player, "display", id)));
+        options.add(new PopupMenuManager.MenuOption("Spielern Rang geben", "Online-Spieler auswählen",
+                () -> openRankAssignees(player, id)));
         int homes = plugin.getConfig().getInt("ranks." + id + ".max-homes", 1);
-        inv.setItem(16, actionItem(Material.RED_DYE, "&cHomes −", "&7Aktuell: " + homes, "homes-:" + id));
-        inv.setItem(17, menuItem(Material.PAPER, "&6Max Homes: &f" + homes, "&7Mit den Knöpfen links und rechts ändern."));
-        inv.setItem(18, actionItem(Material.LIME_DYE, "&aHomes +", "&7Aktuell: " + homes, "homes+:" + id));
+        options.add(new PopupMenuManager.MenuOption("Homes −", "Aktuell: " + homes, () -> {
+            plugin.getConfig().set("ranks." + id + ".max-homes", Math.max(1, homes - 1));
+            plugin.saveConfig(); openRankEditor(player, id);
+        }));
+        options.add(new PopupMenuManager.MenuOption("Homes +", "Aktuell: " + homes, () -> {
+            plugin.getConfig().set("ranks." + id + ".max-homes", Math.min(100, homes + 1));
+            plugin.saveConfig(); openRankEditor(player, id);
+        }));
         int weight = plugin.getConfig().getInt("ranks." + id + ".weight", 0);
-        inv.setItem(20, actionItem(Material.RED_DYE, "&cRanggewicht −", "&7Aktuell: " + weight, "weight-:" + id));
-        inv.setItem(21, menuItem(Material.PAPER, "&6Gewicht: &f" + weight, "&7Höhere Gewichte erscheinen weiter oben."));
-        inv.setItem(22, actionItem(Material.LIME_DYE, "&aRanggewicht +", "&7Aktuell: " + weight, "weight+:" + id));
-        inv.setItem(24, actionItem(Material.COMMAND_BLOCK, "&bVanilla-/Server-Rechte", "&7Alle registrierten Permission-Nodes", "vanillaperms:" + id));
-        inv.setItem(25, actionItem(Material.WRITABLE_BOOK, "&eEigenes Recht hinzufügen", "&7Permission-Node im Chat eingeben", "vanillaadd:" + id));
-
-        List<String> permissions = rankPermissionChoices(id);
-        int slot = 28;
-        for (String permission : permissions) {
-            if (slot > 34) slot = 37;
-            if (slot > 43) break;
+        options.add(new PopupMenuManager.MenuOption("Ranggewicht −", "Aktuell: " + weight, () -> {
+            plugin.getConfig().set("ranks." + id + ".weight", Math.max(-1000, weight - 1));
+            plugin.saveConfig(); openRankEditor(player, id);
+        }));
+        options.add(new PopupMenuManager.MenuOption("Ranggewicht +", "Aktuell: " + weight, () -> {
+            plugin.getConfig().set("ranks." + id + ".weight", Math.min(1000, weight + 1));
+            plugin.saveConfig(); openRankEditor(player, id);
+        }));
+        options.add(new PopupMenuManager.MenuOption("Alle Plugin- und Vanilla-Rechte", "Registrierte Permission-Nodes anzeigen",
+                () -> openVanillaPermissionMenu(player, id, 0)));
+        options.add(new PopupMenuManager.MenuOption("Eigenes Recht hinzufügen", "Permission-Node im Chat eingeben",
+                () -> promptRankInput(player, "permission", id)));
+        for (String permission : rankPermissionChoices(id)) {
             boolean enabled = plugin.getConfig().getStringList("ranks." + id + ".permissions").contains(permission);
-            ItemStack item = menuItem(enabled ? Material.LIME_DYE : Material.GRAY_DYE,
-                    (enabled ? "&a✔ " : "&7✖ ") + permission, "&eKlicken zum " + (enabled ? "Entfernen" : "Hinzufügen"));
-            setMenuAction(item, "perm:" + id + ":" + permission); inv.setItem(slot++, item);
+            options.add(new PopupMenuManager.MenuOption((enabled ? "§a✓ " : "§c✗ ") + permission,
+                    enabled ? "Recht entfernen" : "Recht hinzufügen", () -> {
+                        List<String> perms = new ArrayList<>(plugin.getConfig().getStringList("ranks." + id + ".permissions"));
+                        if (!perms.remove(permission)) perms.add(permission);
+                        plugin.getConfig().set("ranks." + id + ".permissions", perms); plugin.saveConfig();
+                        for (Player online : Bukkit.getOnlinePlayers()) if (getRankId(online).equals(id)) refreshPlayer(online);
+                        openRankEditor(player, id);
+                    }));
         }
-        inv.setItem(49, actionItem(Material.ARROW, "&7Zur Rangliste", "", "back"));
-        GuiStyle.frame(inv); player.openInventory(inv);
+        options.add(new PopupMenuManager.MenuOption("« Zur Rangliste", "Zurück", () -> openRankMenu(player)));
+        plugin.popupMenuManager().showMenu(player, "Rang: " + id, "Bearbeite Rang, Rechte und Spieler.", options);
     }
 
     private void openRankAssignees(Player player, String rankId) {
-        Inventory inv = Bukkit.createInventory(new MenuHolder("rank-assign", rankId), 54, GuiStyle.title("Rang vergeben: " + rankId));
-        int slot = 10;
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
         for (Player target : Bukkit.getOnlinePlayers()) {
-            if (slot == 17 || slot == 26 || slot == 35 || slot == 44) slot += 2;
-            if (slot >= 44) break;
-            ItemStack item = menuItem(Material.PLAYER_HEAD, "&f" + target.getName(), "&7Aktuell: " + getRankId(target), "&eKlicken zum Zuweisen");
-            setMenuAction(item, "assignplayer:" + rankId + ":" + target.getUniqueId());
-            inv.setItem(slot++, item);
+            options.add(new PopupMenuManager.MenuOption(target.getName(),
+                    "Aktueller Rang: " + getRankId(target), () -> {
+                        rankData.set("players." + target.getUniqueId(), rankId); saveRanks(); refreshPlayer(target);
+                        plugin.networkSyncManager().publish(target);
+                        player.sendMessage(color("&aRang &f" + rankId + " &aan &f" + target.getName() + " &avergeben."));
+                        openRankEditor(player, rankId);
+                    }));
         }
-        inv.setItem(49, actionItem(Material.ARROW, "&7Zurück", "", "edit:" + rankId));
-        GuiStyle.frame(inv); player.openInventory(inv);
+        options.add(new PopupMenuManager.MenuOption("« Zurück", "Zur Rangbearbeitung", () -> openRankEditor(player, rankId)));
+        plugin.popupMenuManager().showMenu(player, "Rang vergeben: " + rankId,
+                "Wähle einen Online-Spieler.", options);
     }
 
     private void openVanillaPermissionMenu(Player player, String id, int page) {
         if (!canManageRanks(player) || !plugin.getConfig().isConfigurationSection("ranks." + id)) return;
-        List<String> nodes = new ArrayList<>(Bukkit.getPluginManager().getPermissions().stream()
-                .map(Permission::getName).toList());
-        nodes.addAll(List.of(
-                "minecraft.command.help", "minecraft.command.list", "minecraft.command.me",
+        List<String> nodes = new ArrayList<>(Bukkit.getPluginManager().getPermissions().stream().map(Permission::getName).toList());
+        nodes.addAll(List.of("minecraft.command.help", "minecraft.command.list", "minecraft.command.me",
                 "minecraft.command.msg", "minecraft.command.say", "minecraft.command.teleport",
                 "minecraft.command.gamemode", "minecraft.command.give", "minecraft.command.effect",
                 "minecraft.command.enchant", "minecraft.command.time", "minecraft.command.weather",
                 "minecraft.command.clear", "minecraft.command.kick", "minecraft.command.ban",
                 "minecraft.command.pardon", "minecraft.command.op", "minecraft.command.deop",
-                "minecraft.command.whitelist", "minecraft.command.stop", "minecraft.command.save-all"
-        ));
+                "minecraft.command.whitelist", "minecraft.command.stop", "minecraft.command.save-all"));
         nodes = nodes.stream().filter(node -> node != null && node.matches("[a-zA-Z0-9_.:-]+"))
                 .distinct().sorted(String.CASE_INSENSITIVE_ORDER).toList();
-        int maxPage = Math.max(0, (nodes.size() - 1) / 45);
+        int pageSize = 24;
+        int maxPage = Math.max(0, (nodes.size() - 1) / pageSize);
         int currentPage = Math.max(0, Math.min(page, maxPage));
-        Inventory inv = Bukkit.createInventory(new MenuHolder("rank-permissions", id), 54,
-                GuiStyle.title("Rechte " + id + " " + (currentPage + 1) + "/" + (maxPage + 1)));
         List<String> enabled = plugin.getConfig().getStringList("ranks." + id + ".permissions");
-        int start = currentPage * 45;
-        for (int i = start; i < Math.min(nodes.size(), start + 45); i++) {
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        for (int i = currentPage * pageSize; i < Math.min(nodes.size(), (currentPage + 1) * pageSize); i++) {
             String node = nodes.get(i);
             boolean active = enabled.contains(node);
-            ItemStack item = menuItem(active ? Material.LIME_DYE : Material.GRAY_DYE,
-                    (active ? "&a✔ " : "&7✖ ") + node,
-                    active ? "&eKlicken zum Entfernen" : "&eKlicken zum Hinzufügen");
-            setMenuAction(item, "vanillaperm:" + id + ":" + currentPage + ":" + node);
-            inv.setItem(i - start, item);
+            options.add(new PopupMenuManager.MenuOption((active ? "§a✓ " : "§c✗ ") + node,
+                    active ? "Recht entfernen" : "Recht hinzufügen", () -> {
+                        List<String> permissions = new ArrayList<>(plugin.getConfig().getStringList("ranks." + id + ".permissions"));
+                        if (!permissions.remove(node)) permissions.add(node);
+                        plugin.getConfig().set("ranks." + id + ".permissions", permissions); plugin.saveConfig();
+                        for (Player online : Bukkit.getOnlinePlayers()) if (getRankId(online).equals(id)) refreshPlayer(online);
+                        openVanillaPermissionMenu(player, id, currentPage);
+                    }));
         }
-        if (currentPage > 0) inv.setItem(45, actionItem(Material.ARROW, "&eVorherige Seite", "", "vanillapage:" + id + ":" + (currentPage - 1)));
-        inv.setItem(49, actionItem(Material.BOOK, "&7Zurück zum Rang", "", "edit:" + id));
-        if (currentPage < maxPage) inv.setItem(53, actionItem(Material.ARROW, "&eNächste Seite", "", "vanillapage:" + id + ":" + (currentPage + 1)));
-        player.openInventory(inv);
+        if (currentPage > 0) options.add(new PopupMenuManager.MenuOption("« Vorherige Seite", "Seite " + currentPage,
+                () -> openVanillaPermissionMenu(player, id, currentPage - 1)));
+        if (currentPage < maxPage) options.add(new PopupMenuManager.MenuOption("Nächste Seite »", "Seite " + (currentPage + 2),
+                () -> openVanillaPermissionMenu(player, id, currentPage + 1)));
+        options.add(new PopupMenuManager.MenuOption("Eigenes Recht hinzufügen", "Permission-Node eingeben",
+                () -> promptRankInput(player, "permission", id)));
+        options.add(new PopupMenuManager.MenuOption("« Zur Rangbearbeitung", "Zurück", () -> openRankEditor(player, id)));
+        plugin.popupMenuManager().showMenu(player, "Rechte " + id + " (" + (currentPage + 1) + "/" + (maxPage + 1) + ")",
+                "Tippe einen Permission-Node an, um ihn umzuschalten.", options);
     }
 
     private List<String> rankPermissionChoices(String id) {
@@ -487,12 +500,12 @@ public final class UtilityManager implements CommandExecutor, Listener {
 
     private void openVoiceMenu(Player player) {
         String accent = plugin.getConfig().getString("voice-menu.accent", "&b");
-        Inventory inv = Bukkit.createInventory(new MenuHolder("voice"), 27, GuiStyle.title("Voice Chat"));
-        inv.setItem(11, menuItem(Material.NOTE_BLOCK, accent + "Voice-GUI öffnen", "&7Drücke im Spiel &fV&7."));
-        inv.setItem(13, menuItem(Material.ENDER_EYE, accent + "Mikrofon & Einstellungen", "&7In der Voice-GUI auf das Zahnrad klicken."));
-        inv.setItem(15, menuItem(Material.PLAYER_HEAD, accent + "Gruppe erstellen", "&7Voice-GUI mit &fV&7 öffnen und Gruppe wählen."));
-        GuiStyle.frame(inv);
-        player.openInventory(inv);
+        List<PopupMenuManager.MenuOption> options = List.of(
+                new PopupMenuManager.MenuOption("Voice-GUI öffnen", "Drücke im Spiel V."),
+                new PopupMenuManager.MenuOption("Mikrofon & Einstellungen", "In der Voice-GUI das Zahnrad wählen."),
+                new PopupMenuManager.MenuOption("Gruppe erstellen", "Voice-GUI mit V öffnen und Gruppe wählen.")
+        );
+        plugin.popupMenuManager().showMenu(player, "Simple Voice Chat", "Voice-Chat-Hilfe (" + ChatColor.stripColor(color(accent)) + ")", options);
     }
 
     private ItemStack menuItem(Material material, String title, String lore) {
