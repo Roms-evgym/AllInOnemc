@@ -1,18 +1,12 @@
 package dev.codex.servertoolkit;
 
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 
 import java.io.File;
 import java.io.IOException;
@@ -136,62 +130,6 @@ public final class KitManager implements Listener {
         plugin.popupMenuManager().showMenu(player, "AllInOneMC – Kits", "Wähle ein Kit zum Abholen.", options);
     }
 
-    @EventHandler
-    public void onMenuClick(InventoryClickEvent event) {
-        if (!(event.getView().getTopInventory().getHolder() instanceof KitMenu holder)) return;
-        event.setCancelled(true);
-        if (!(event.getWhoClicked() instanceof Player player) || event.getClickedInventory() != holder.inventory) return;
-        int slot = event.getSlot();
-        int pages = (holder.ids.size() + 27) / 28;
-        if (pages > 1 && slot == 45 && holder.page > 0) { openPage(player, holder.ids, holder.page - 1); return; }
-        if (pages > 1 && slot == 53 && holder.page + 1 < pages) { openPage(player, holder.ids, holder.page + 1); return; }
-        String id = holder.kitSlots.get(slot);
-        if (id != null) { player.closeInventory(); claim(player, id); }
-    }
-
-    private void openPage(Player player, List<String> ids, int page) {
-        // Render one page from the same kit definitions without making a second storage format.
-        ConfigurationSection kits = data.getConfigurationSection("kits");
-        KitMenu holder = new KitMenu(ids, page);
-        Inventory inv = Bukkit.createInventory(holder, 54, GuiStyle.title("Kits"));
-        holder.inventory = inv;
-        List<Integer> slots = kitSlots();
-        int pages = (ids.size() + 27) / 28;
-        for (int index = page * slots.size(); index < Math.min(ids.size(), (page + 1) * slots.size()); index++) {
-            int slot = slots.get(index - page * slots.size());
-            String id = ids.get(index), path = "kits." + id;
-            ItemStack icon = null;
-            for (ItemStack item : readItems(path + ".contents", 36))
-                if (item != null && item.getType() != Material.AIR) { icon = item.clone(); break; }
-            if (icon == null) icon = new ItemStack(Material.CHEST);
-            ItemMeta meta = icon.getItemMeta();
-            meta.setDisplayName(color(GuiStyle.accent() + id));
-            long seconds = data.getLong(path + ".cooldown-seconds", 86400);
-            long readyAt = data.getLong("claims." + player.getUniqueId() + "." + id, 0) + seconds * 1000L;
-            meta.setLore(List.of(color("&7Cooldown: &f" + (seconds == 0 ? "Keiner" : formatTime(seconds))),
-                    color(readyAt > System.currentTimeMillis() ? "&cVerfügbar in " + formatTime((readyAt-System.currentTimeMillis()+999)/1000) : "&aKlicken zum Abholen")));
-            icon.setItemMeta(meta); inv.setItem(slot, icon); holder.kitSlots.put(slot, id);
-        }
-        if (pages > 1) {
-            if (page > 0) inv.setItem(45, menuItem(Material.ARROW, GuiStyle.accent() + "« Zurück", "&7Seite " + page + "/" + pages));
-            inv.setItem(49, menuItem(Material.PAPER, GuiStyle.accent() + "Seite " + (page + 1) + "/" + pages, "&7Kits gesamt: " + ids.size()));
-            if (page + 1 < pages) inv.setItem(53, menuItem(Material.ARROW, GuiStyle.accent() + "Weiter »", "&7Seite " + (page + 2) + "/" + pages));
-        }
-        GuiStyle.frame(inv); player.openInventory(inv);
-    }
-
-    private List<Integer> kitSlots() {
-        List<Integer> slots = new ArrayList<>(28);
-        for (int row = 1; row <= 4; row++) for (int column = 1; column <= 7; column++) slots.add(row * 9 + column);
-        return slots;
-    }
-
-    private ItemStack menuItem(Material material, String title, String lore) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(color(title)); meta.setLore(List.of(color(lore))); item.setItemMeta(meta); return item;
-    }
-
     private boolean empty(ItemStack[] items) {
         for (ItemStack item : items) if (item != null && item.getType() != Material.AIR) return false;
         return true;
@@ -217,12 +155,4 @@ public final class KitManager implements Listener {
         catch (IOException ex) { plugin.getLogger().severe("Kits konnten nicht gespeichert werden: " + ex.getMessage()); }
     }
 
-    private static final class KitMenu implements InventoryHolder {
-        private final List<String> ids;
-        private final int page;
-        private final java.util.Map<Integer, String> kitSlots = new java.util.HashMap<>();
-        private Inventory inventory;
-        private KitMenu(List<String> ids, int page) { this.ids = ids; this.page = page; }
-        @Override public Inventory getInventory() { return inventory; }
-    }
 }
