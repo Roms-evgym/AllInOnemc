@@ -73,7 +73,7 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
             sender.sendMessage("Dieser Befehl ist nur im Spiel verfügbar.");
             return true;
         }
-        switch (command.getName().toLowerCase(Locale.ROOT)) {
+        switch (label.toLowerCase(Locale.ROOT)) {
             case "shop" -> openShop(player);
             case "sell" -> { if (args.length == 0) openSellMenu(player); else sell(player, args); }
             case "rtp" -> openRtpMenu(player);
