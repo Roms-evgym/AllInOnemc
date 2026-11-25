@@ -546,8 +546,10 @@ public final class UtilityManager implements CommandExecutor, Listener {
         if (player == null) return;
         String id = getRankId(player);
         String prefix = rankPrefix(id);
-        player.setPlayerListName(prefix + player.getName());
-        player.setDisplayName(prefix + player.getName());
+        String clan = plugin.clanManager() == null ? null : plugin.clanManager().clanName(player.getUniqueId());
+        String clanTag = clan == null || clan.isBlank() ? "" : color(" &8[&e" + clan + "&8]");
+        player.setPlayerListName(prefix + player.getName() + clanTag);
+        player.setDisplayName(prefix + player.getName() + clanTag);
         PermissionAttachment previous = rankAttachments.remove(player.getUniqueId());
         if (previous != null) previous.remove();
         PermissionAttachment attachment = player.addAttachment(plugin);
