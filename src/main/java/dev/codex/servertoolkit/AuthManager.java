@@ -243,7 +243,6 @@ public final class AuthManager implements Listener, PluginMessageListener {
     public void onJoin(PlayerJoinEvent event) {
         if (!plugin.isLobbyMode()) return;
         Player player = event.getPlayer();
-        authenticated.remove(player.getUniqueId());
         failedAttempts.remove(player.getUniqueId());
         lockedUntil.remove(player.getUniqueId());
         plugin.getServer().getScheduler().runTask(plugin, () -> {
