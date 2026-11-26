@@ -131,6 +131,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
 
     @Override
     public void onDisable() {
+        if (authManager != null) authManager.shutdown();
         if (maceManager != null) maceManager.shutdown();
         getServer().getMessenger().unregisterIncomingPluginChannel(this, NetworkSyncManager.CHANNEL);
         getServer().getMessenger().unregisterOutgoingPluginChannel(this, NetworkSyncManager.CHANNEL);
