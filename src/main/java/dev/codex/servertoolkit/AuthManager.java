@@ -22,7 +22,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
-import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.plugin.messaging.PluginMessageListener;
 
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
@@ -40,7 +40,7 @@ import java.util.UUID;
  * Lobby-only account authentication. Passwords are stored as PBKDF2 hashes;
  * authentication is session-scoped and is cleared by the proxy on disconnect.
  */
-public final class AuthManager implements Listener {
+public final class AuthManager implements Listener, PluginMessageListener {
     private static final String CHANNEL = "allinone:auth";
     private static final int ITERATIONS = 210_000;
     private static final int KEY_BITS = 256;
@@ -60,6 +60,7 @@ public final class AuthManager implements Listener {
         this.file = new File(plugin.getDataFolder(), "auth.yml");
         this.data = YamlConfiguration.loadConfiguration(file);
         plugin.getServer().getMessenger().registerOutgoingPluginChannel(plugin, CHANNEL);
+        plugin.getServer().getMessenger().registerIncomingPluginChannel(plugin, CHANNEL, this);
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
@@ -184,6 +185,25 @@ public final class AuthManager implements Listener {
         } catch (java.io.IOException ex) {
             plugin.getLogger().warning("Could not send auth state to proxy: " + ex.getMessage());
         }
+    }
+
+    @Override
+    public void onPluginMessageReceived(String channel, Player player, byte[] message) {
+        if (!CHANNEL.equals(channel) || message == null || message.length > 256) return;
+        try (java.io.DataInputStream in = new java.io.DataInputStream(new java.io.ByteArrayInputStream(message))) {
+            String operation = in.readUTF();
+            UUID id = UUID.fromString(in.readUTF());
+            if (!id.equals(player.getUniqueId()) || in.available() != 0) return;
+            if ("AUTHENTICATED".equals(operation)) authenticated.add(id);
+            else if ("LOGOUT".equals(operation)) authenticated.remove(id);
+        } catch (Exception ex) {
+            plugin.getLogger().warning("Rejected malformed proxy auth status.");
+        }
+    }
+
+    public void shutdown() {
+        plugin.getServer().getMessenger().unregisterIncomingPluginChannel(plugin, CHANNEL, this);
+        plugin.getServer().getMessenger().unregisterOutgoingPluginChannel(plugin, CHANNEL);
     }
 
     public boolean isAuthenticated(Player player) {
