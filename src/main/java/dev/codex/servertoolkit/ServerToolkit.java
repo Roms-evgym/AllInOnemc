@@ -48,6 +48,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     private PlaytimeManager playtimeManager;
     private BountyManager bountyManager;
     private ContentToolsManager contentToolsManager;
+    private AuthManager authManager;
     private final Map<java.util.UUID, Long> rtpCooldowns = new HashMap<>();
 
     @Override
@@ -58,6 +59,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         saveConfig();
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
         lobbyMode = getConfig().getString("mode", "LOBBY").equalsIgnoreCase("LOBBY");
+        authManager = new AuthManager(this);
         getServer().getPluginManager().registerEvents(this, this);
         clanManager = new ClanManager(this);
         clanDuelManager = new ClanDuelManager(this, clanManager);
@@ -79,7 +81,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         WorldSpawnManager worldSpawnManager = new WorldSpawnManager();
         for (String name : new String[]{"spawn", "setspawn", "sethome", "home", "homes", "delhome", "rtp", "clan", "clanduel", "mace",
                 "fly", "god", "invsee", "echest", "ecsee", "trash", "ranks", "rank", "voice", "ah", "order", "orders", "kit",
-                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode", "menu", "bounty", "playtime", "sit", "lag", "crash", "nick", "prank"}) {
+                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode", "menu", "bounty", "playtime", "sit", "lag", "crash", "nick", "prank", "register", "login", "logout"}) {
             registerCommandBridge(name, List.of(), (sender, args) -> {
                 if (name.equals("sit")) sitManager.onCommand(sender, null, name, args);
                 else if (name.equals("fakebase") || name.equals("fakore")) worldSpawnManager.onCommand(sender, null, name, args);
@@ -145,6 +147,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             case "crash" -> { contentToolsManager.handleCrash(sender, args); return true; }
             case "nick" -> { contentToolsManager.handleNick(sender, args); return true; }
             case "prank" -> { contentToolsManager.handlePrank(sender, args); return true; }
+            case "register", "login", "logout" -> { if (sender instanceof Player p) authManager.handle(p, label, args); else sender.sendMessage("Nur im Spiel verfügbar."); return true; }
             case "bounty" -> { if (sender instanceof Player p) bountyManager.handle(p, args); else sender.sendMessage("Nur im Spiel verfügbar."); return true; }
             case "ban" -> { moderationManager.handleBan(sender, args); return true; }
             case "punish" -> { moderationManager.handlePunish(sender, args); return true; }
@@ -235,6 +238,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     private String commandPermission(String name) {
         return switch (name) {
             case "menu" -> "servertoolkit.menu.open";
+            case "register", "login", "logout" -> "servertoolkit.auth.use";
             case "setspawn", "fakebase", "fakore" -> "servertoolkit.admin";
             case "clanduel" -> "servertoolkit.clanduel";
             case "fly" -> "servertoolkit.fly";
@@ -262,6 +266,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     PlaytimeManager playtimeManager() { return playtimeManager; }
     BountyManager bountyManager() { return bountyManager; }
     ContentToolsManager contentToolsManager() { return contentToolsManager; }
+    public boolean isLobbyMode() { return lobbyMode; }
 
     private String[] prepend(String first, String[] rest) {
         String[] result = new String[rest.length + 1];
