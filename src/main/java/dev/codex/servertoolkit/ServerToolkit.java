@@ -266,7 +266,6 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     PlaytimeManager playtimeManager() { return playtimeManager; }
     BountyManager bountyManager() { return bountyManager; }
     ContentToolsManager contentToolsManager() { return contentToolsManager; }
-    public boolean isLobbyMode() { return lobbyMode; }
 
     private String[] prepend(String first, String[] rest) {
         String[] result = new String[rest.length + 1];
