@@ -11,6 +11,9 @@ dependencies:
       required: true
       join-classpath: true
 permissions:
+  servertoolkit.auth.use:
+    description: Darf sich bei AllInOne Auth anmelden und registrieren.
+    default: true
   servertoolkit.command.spawn:
     description: Darf den Befehl /spawn verwenden.
     default: true
