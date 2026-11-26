@@ -5,6 +5,18 @@ api-version: '26.3'
 description: Kleine Lobby- und Survival-Werkzeuge in einem Plugin.
 softdepend: [Vault, SMPCore, LuckPerms, LuckTAB, voicechat, floodgate]
 commands:
+  register:
+    description: Erstellt ein AllInOne-Konto in der Lobby.
+    usage: /register <Passwort> <Passwort-wiederholen>
+    permission: servertoolkit.auth.use
+  login:
+    description: Meldet dich in der Lobby bei AllInOne an.
+    usage: /login <Passwort>
+    permission: servertoolkit.auth.use
+  logout:
+    description: Meldet dich in der Lobby ab.
+    usage: /logout
+    permission: servertoolkit.auth.use
   prank:
     description: Aktiviert oder deaktiviert freiwillige Content-Pranks.
     usage: /prank <on|off|status>
@@ -169,6 +181,9 @@ commands:
     usage: /fakore <erz> [anzahl]
     permission: servertoolkit.admin
 permissions:
+  servertoolkit.auth.use:
+    description: Darf sich bei AllInOne Auth anmelden und registrieren.
+    default: true
   servertoolkit.command.spawn:
     description: Darf den Befehl /spawn verwenden.
     default: true
