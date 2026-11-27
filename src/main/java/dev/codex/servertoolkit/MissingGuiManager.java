@@ -81,6 +81,7 @@ final class MissingGuiManager implements Listener {
             add(menu, 45, Material.CHEST, "§cSpieler-Inventar ansehen", "invsee");
             add(menu, 46, Material.ENDER_CHEST, "§5Spieler-Enderchest ansehen", "ecsee");
         }
+        add(menu, 49, Material.LAVA_BUCKET, "§6Gegenstand entsorgen", "trash");
         if (p.hasPermission("servertoolkit.ban")) {
             add(menu, 50, Material.IRON_AXE, "§cSpieler bannen", "ban");
             add(menu, 51, Material.PAPER, "§cSpieler bestrafen", "punish");
@@ -307,7 +308,7 @@ final class MissingGuiManager implements Listener {
             case "tpa" -> openTargets(p, "tpa");
             case "balance" -> openMoney(p);
             case "tpaccept", "tpdeny", "sit", "hub", "setspawn", "spawn", "echest", "shop", "sell", "clan", "kit", "ranks",
-                    "ah", "orders", "mace", "servers", "voice", "nick", "prank", "banrank", "vanish", "clanduel", "fakebase", "lag", "crash" -> {
+                    "ah", "orders", "mace", "servers", "voice", "nick", "prank", "banrank", "vanish", "clanduel", "fakebase", "lag", "crash", "trash" -> {
                 p.performCommand(action);
                 p.closeInventory();
             }
