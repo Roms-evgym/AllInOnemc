@@ -142,6 +142,12 @@ final class MissingGuiManager implements Listener {
                         (delete ? "delhome:" : "home:") + name);
             }
         }
+        if (plugin.getConfig().contains("homes." + p.getUniqueId())
+                && (homes == null || !homes.contains("home")) && slot < 45) {
+            add(menu, slot++, delete ? Material.TNT : Material.RED_BED,
+                    delete ? "§cLöschen: §fhome" : "§aTeleport: §fhome",
+                    delete ? "delhome:home" : "home:home");
+        }
         if (!delete) {
             add(menu, 47, Material.LIME_BED, "§aHome hier setzen", "sethome");
             add(menu, 48, Material.WRITABLE_BOOK, "§eHome mit Namen setzen", "sethome-named");
