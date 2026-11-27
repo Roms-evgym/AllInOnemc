@@ -198,6 +198,15 @@ final class ContentToolsManager implements Listener {
 
     void applyNickFromGui(Player target, CommandSender actor) { applyNick(target, actor); }
 
+    void restoreNickFromGui(Player target, CommandSender actor) {
+        if (!actor.hasPermission("servertoolkit.nick.others")) {
+            actor.sendMessage("§cKeine Berechtigung.");
+            return;
+        }
+        restoreNick(target);
+        actor.sendMessage("§aNick von " + target.getName() + " entfernt.");
+    }
+
     private boolean isNickInUse(String candidate) {
         for (NickSession session : nickSessions.values()) {
             if (session.nick.equalsIgnoreCase(candidate)) return true;
