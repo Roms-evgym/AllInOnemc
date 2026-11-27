@@ -3,7 +3,6 @@ package dev.codex.servertoolkit;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
@@ -146,6 +145,7 @@ public final class CombatStatsManager implements Listener {
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
         flushPlaytime(player.getUniqueId(), player.getName());
+        playtimeFlush.remove(player.getUniqueId());
         if (!enabled() || !isInCombat(player)) {
             combatUntil.remove(player.getUniqueId());
             opponents.remove(player.getUniqueId());
@@ -171,7 +171,6 @@ public final class CombatStatsManager implements Listener {
         player.getInventory().clear();
         player.getInventory().setArmorContents(new ItemStack[4]);
         player.getInventory().setItemInOffHand(null);
-        player.getWorld().dropItemNaturally(location, new ItemStack(Material.AIR));
     }
 
     private void drop(ItemStack item, Location location) {
@@ -182,13 +181,14 @@ public final class CombatStatsManager implements Listener {
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
         playtimeFlush.put(player.getUniqueId(), System.currentTimeMillis());
-        if (!enabled() || !forcedSpawn.remove(player.getUniqueId())) return;
-        saveForcedSpawn();
+        if (!enabled() || !forcedSpawn.contains(player.getUniqueId())) return;
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (!player.isOnline()) return;
             Location spawn = plugin.loadSpawn();
             if (spawn == null) spawn = player.getWorld().getSpawnLocation();
             player.teleport(spawn);
+            forcedSpawn.remove(player.getUniqueId());
+            saveForcedSpawn();
             player.sendMessage(ChatColor.RED + "Du wurdest nach deinem Kampf-Logout am Spawn wiederbelebt.");
         });
     }
@@ -204,6 +204,10 @@ public final class CombatStatsManager implements Listener {
     }
 
     private void flushAllPlaytime() {
+        for (Player player : Bukkit.getOnlinePlayers()) flushPlaytime(player.getUniqueId(), player.getName());
+    }
+
+    public void shutdown() {
         for (Player player : Bukkit.getOnlinePlayers()) flushPlaytime(player.getUniqueId(), player.getName());
     }
 
