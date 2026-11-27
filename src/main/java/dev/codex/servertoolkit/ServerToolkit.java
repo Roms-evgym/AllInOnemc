@@ -53,6 +53,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     private SubcommandDialogManager subcommandDialogManager;
     private AuthManager authManager;
     private ReplayManager replayManager;
+    private CombatStatsManager combatStatsManager;
     private final Map<java.util.UUID, Long> rtpCooldowns = new HashMap<>();
 
     @Override
@@ -84,12 +85,13 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         kitManager = new KitManager(this);
         moderationManager = new ModerationManager(this);
         replayManager = new ReplayManager(this);
+        combatStatsManager = new CombatStatsManager(this);
         sitManager = new SitManager(this);
         lobbyManager = new LobbyManager(this);
         WorldSpawnManager worldSpawnManager = new WorldSpawnManager();
         for (String name : new String[]{"spawn", "setspawn", "sethome", "home", "homes", "delhome", "rtp", "clan", "clanduel", "mace",
                 "fly", "god", "invsee", "echest", "ecsee", "trash", "ranks", "rank", "voice", "ah", "order", "orders", "kit",
-                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode", "menu", "bounty", "playtime", "sit", "lag", "crash", "nick", "unnick", "prank", "register", "login", "logout", "report", "atlas"}) {
+                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode", "menu", "bounty", "playtime", "sit", "lag", "crash", "nick", "unnick", "prank", "register", "login", "logout", "report", "atlas", "stats"}) {
             registerCommandBridge(name, List.of(), (sender, args) -> {
                 if (name.equals("fakebase") || name.equals("fakore")) worldSpawnManager.onCommand(sender, null, name, args);
                 else onCommand(sender, null, name, args);
@@ -142,6 +144,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         if (authManager != null) authManager.shutdown();
         if (maceManager != null) maceManager.shutdown();
         if (replayManager != null) replayManager.shutdown();
+        if (combatStatsManager != null) combatStatsManager.shutdown();
         getServer().getMessenger().unregisterIncomingPluginChannel(this, NetworkSyncManager.CHANNEL);
         getServer().getMessenger().unregisterOutgoingPluginChannel(this, NetworkSyncManager.CHANNEL);
     }
@@ -169,6 +172,11 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             case "atlas" -> {
                 if (sender instanceof Player p) replayManager.handleAtlas(p, args);
                 else sender.sendMessage("Dieser Befehl ist nur im Spiel verfügbar.");
+                return true;
+            }
+            case "stats" -> {
+                if (sender instanceof Player p) combatStatsManager.handleStats(p, args);
+                else sender.sendMessage("Nur im Spiel verfügbar.");
                 return true;
             }
             case "playtime" -> {
@@ -314,6 +322,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         return switch (name) {
             case "menu" -> "servertoolkit.menu.open";
             case "atlas" -> "atlas.view";
+            case "stats" -> "servertoolkit.command.stats";
             case "report" -> "atlas.report";
             case "register", "login", "logout" -> "servertoolkit.auth.use";
             case "setspawn", "fakebase", "fakore" -> "servertoolkit.admin";
@@ -336,6 +345,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     }
 
     UtilityManager utilityManager() { return utilityManager; }
+    CombatStatsManager combatStatsManager() { return combatStatsManager; }
     ClanManager clanManager() { return clanManager; }
     EconomyManager economyManager() { return economyManager; }
     NetworkSyncManager networkSyncManager() { return networkSyncManager; }
@@ -370,7 +380,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
                     color(getConfig().getString("join-subtitle", "")), 10, 60, 20);
             lobbyManager.onJoin(player);
         }
-        if (getConfig().getBoolean("teleport-to-spawn-on-join", true)) {
+        if (lobbyMode && getConfig().getBoolean("teleport-to-spawn-on-join", true)) {
             Location spawn = loadLocation("spawn");
             if (spawn != null) player.teleport(spawn);
         }
@@ -383,6 +393,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
 
     @EventHandler
     public void onRespawn(PlayerRespawnEvent event) {
+        if (!lobbyMode) return; // Survival bed respawns must remain untouched.
         Location spawn = loadLocation("spawn");
         if (spawn != null) event.setRespawnLocation(spawn);
     }
