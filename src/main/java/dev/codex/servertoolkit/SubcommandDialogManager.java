@@ -67,7 +67,7 @@ final class SubcommandDialogManager implements Listener {
     private void clan(Player p) {
         menu(p,"Clan – Untermenüs","Wähle einen Unterbefehl.",
             ask(p,"Clan erstellen","/clan create <Name>","clan create","Clan-Name (3–16 Zeichen):"),
-            ask(p,"Spieler einladen","/clan invite <Spieler>","clan invite","Spielername:");
+            ask(p,"Spieler einladen","/clan invite <Spieler>","clan invite","Spielername:"),
             run(p,"Einladung annehmen","/clan accept","clan accept"),
             run(p,"Clan verlassen","/clan leave","clan leave"),
             run(p,"Clan auflösen","/clan disband","clan disband"),
@@ -81,7 +81,7 @@ final class SubcommandDialogManager implements Listener {
             ask(p,"Kit löschen","/kit delete <ID>","kit delete","Kit-ID:"),
             ask(p,"Cooldown setzen","/kit cooldown <ID> <Sekunden>","kit cooldown","Kit-ID und Sekunden, z. B. starter 3600:"),
             ask(p,"Zugriff festlegen","/kit access <ID> all|rank <Rang>|player <Spieler>","kit access","Kit-ID und Zugriff (z. B. starter rank vip):"),
-            run(p,"Kit-Verwaltung","Öffnet das Verwaltungsmenü.","kit manage","kit manage"),
+            run(p,"Kit-Verwaltung","Öffnet das Verwaltungsmenü.","kit manage"),
             ask(p,"Kit beanspruchen","/kit claim <ID>","kit claim","Kit-ID:"));
     }
     private void auction(Player p) {
