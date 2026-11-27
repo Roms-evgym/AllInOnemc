@@ -240,8 +240,9 @@ public final class ReplayManager implements Listener {
         }
         replayFrames.sort(Comparator.comparingLong(Frame::time));
         List<ReplayEvent> replayEvents = new ArrayList<>();
-        for (Object raw : yaml.getMapList("events")) {
-            ReplayEvent event = ReplayEvent.fromMap(raw);
+        for (Object raw : yaml.getList("events", List.of())) {
+            if (!(raw instanceof Map<?, ?> map)) continue;
+            ReplayEvent event = ReplayEvent.fromMap(map);
             if (event != null) replayEvents.add(event);
         }
         Frame first = replayFrames.get(0);
