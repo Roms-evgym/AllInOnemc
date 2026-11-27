@@ -17,7 +17,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -25,7 +25,7 @@ import java.util.UUID;
 final class MissingGuiManager implements Listener {
     private final ServerToolkit plugin;
     private final NamespacedKey key;
-    private final Map<UUID, String> chatActions = new HashMap<>();
+    private final Map<UUID, String> chatActions = new ConcurrentHashMap<>();
 
     MissingGuiManager(ServerToolkit plugin) {
         this.plugin = plugin;
@@ -276,6 +276,7 @@ final class MissingGuiManager implements Listener {
             case "homes" -> openHomes(p, false);
             case "homes-delete" -> openHomes(p, true);
             case "tpa" -> openTargets(p, "tpa");
+            case "balance" -> openMoney(p);
             case "tpaccept", "tpdeny", "sit", "hub", "setspawn", "shop", "sell", "clan", "kit", "ranks",
                     "ah", "orders", "mace", "servers", "voice", "nick", "prank", "banrank", "vanish" -> {
                 p.performCommand(action);
