@@ -49,6 +49,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     private BountyManager bountyManager;
     private ContentToolsManager contentToolsManager;
     private ContentToolsGuiManager contentToolsGuiManager;
+    private MissingGuiManager missingGuiManager;
     private AuthManager authManager;
     private final Map<java.util.UUID, Long> rtpCooldowns = new HashMap<>();
 
@@ -70,6 +71,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         utilityManager = new UtilityManager(this);
         contentToolsManager = new ContentToolsManager(this);
         contentToolsGuiManager = new ContentToolsGuiManager(this);
+        missingGuiManager = new MissingGuiManager(this);
         networkSyncManager = new NetworkSyncManager(this);
         playtimeManager = new PlaytimeManager(this);
         bountyManager = new BountyManager(this);
@@ -142,24 +144,60 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         switch (label.toLowerCase(java.util.Locale.ROOT)) {
-            case "menu" -> { popupMenuManager.openMainMenu(sender); return true; }
-            case "code" -> { redeemCodeManager.handleRedeem(sender, args); return true; }
-            case "setcode" -> { redeemCodeManager.handleCreate(sender, args); return true; }
-            case "playtime" -> { if (sender instanceof Player p) playtimeManager.handle(p, args); else sender.sendMessage("Nur im Spiel verfügbar."); return true; }
+            case "menu" -> {
+                if (sender instanceof Player p) missingGuiManager.openMain(p);
+                else sender.sendMessage("Nur im Spiel verfügbar.");
+                return true;
+            }
+            case "code" -> {
+                if (sender instanceof Player p && args.length == 0) missingGuiManager.openCode(p);
+                else redeemCodeManager.handleRedeem(sender, args);
+                return true;
+            }
+            case "setcode" -> {
+                if (sender instanceof Player p && args.length == 0) missingGuiManager.openSetCode(p);
+                else redeemCodeManager.handleCreate(sender, args);
+                return true;
+            }
+            case "playtime" -> {
+                if (sender instanceof Player p) {
+                    if (args.length == 0) missingGuiManager.openTargets(p, "playtime");
+                    else playtimeManager.handle(p, args);
+                } else sender.sendMessage("Nur im Spiel verfügbar.");
+                return true;
+            }
             case "lag" -> { contentToolsManager.handleLag(sender, args); return true; }
             case "crash" -> { contentToolsManager.handleCrash(sender, args); return true; }
             case "nick" -> { contentToolsManager.handleNick(sender, args); return true; }
             case "unnick" -> { contentToolsManager.handleUnnick(sender, args); return true; }
             case "prank" -> { contentToolsManager.handlePrank(sender, args); return true; }
             case "register", "login", "logout" -> { if (sender instanceof Player p) authManager.handle(p, label, args); else sender.sendMessage("Nur im Spiel verfügbar."); return true; }
-            case "bounty" -> { if (sender instanceof Player p) bountyManager.handle(p, args); else sender.sendMessage("Nur im Spiel verfügbar."); return true; }
+            case "bounty" -> {
+                if (sender instanceof Player p) {
+                    if (args.length == 0) missingGuiManager.openTargets(p, "bounty");
+                    else bountyManager.handle(p, args);
+                } else sender.sendMessage("Nur im Spiel verfügbar.");
+                return true;
+            }
             case "ban" -> { moderationManager.handleBan(sender, args); return true; }
             case "punish" -> { moderationManager.handlePunish(sender, args); return true; }
             case "banpreset" -> { moderationManager.handlePreset(sender, args); return true; }
             case "banrank" -> { moderationManager.handleBanRanks(sender); return true; }
-            case "money" -> { economyManager.handle(sender, args); return true; }
-            case "pay" -> { economyManager.handle(sender, prepend("pay", args)); return true; }
-            case "eco" -> { economyManager.handle(sender, args); return true; }
+            case "money" -> {
+                if (sender instanceof Player p && args.length == 0) missingGuiManager.openMoney(p);
+                else economyManager.handle(sender, args);
+                return true;
+            }
+            case "pay" -> {
+                if (sender instanceof Player p && args.length == 0) missingGuiManager.openTargets(p, "pay");
+                else economyManager.handle(sender, prepend("pay", args));
+                return true;
+            }
+            case "eco" -> {
+                if (sender instanceof Player p && args.length == 0) missingGuiManager.openEco(p);
+                else economyManager.handle(sender, args);
+                return true;
+            }
             case "hub", "lobby" -> { connectToLobby(sender); return true; }
             case "sell", "shop", "rtp", "tpa", "tpaccept", "tpdeny" -> { playerFeaturesManager.onCommand(sender, command, label, args); return true; }
         }
@@ -205,8 +243,11 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
                 if (home == null) player.sendMessage(color("&cHome nicht gefunden. Nutze /homes oder /sethome <Name>."));
                 else { player.teleport(home); player.sendMessage(color("&aTeleportiert zu Home &f" + homeName + "&a.")); }
             }
-            case "homes" -> listHomes(player);
-            case "delhome" -> deleteHome(player, args);
+            case "homes" -> missingGuiManager.openHomes(player, false);
+            case "delhome" -> {
+                if (args.length == 0) missingGuiManager.openHomes(player, true);
+                else deleteHome(player, args);
+            }
             case "rtp" -> playerFeaturesManager.onCommand(sender, command, label, args);
             case "clan" -> clanManager.handle(player, args);
             case "clanduel" -> clanDuelManager.handle(sender, args);
@@ -215,6 +256,10 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
                     utilityManager.onCommand(sender, command, label, args);
             case "ah", "order", "orders" -> marketManager.onCommand(sender, command, label, args);
             case "kit" -> kitManager.handle(player, args);
+            case "sit" -> {
+                if (args.length == 0) missingGuiManager.openMain(player);
+                else sitManager.onCommand(sender, null, label, args);
+            }
             case "banhammer" -> moderationManager.handleHammer(player, args);
             case "vanish" -> moderationManager.handleVanish(player, args);
             case "servers" -> lobbyManager.openMenu(player);
@@ -271,6 +316,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     BountyManager bountyManager() { return bountyManager; }
     ContentToolsManager contentToolsManager() { return contentToolsManager; }
     ContentToolsGuiManager contentToolsGuiManager() { return contentToolsGuiManager; }
+    MissingGuiManager missingGuiManager() { return missingGuiManager; }
 
     private String[] prepend(String first, String[] rest) {
         String[] result = new String[rest.length + 1];
