@@ -169,7 +169,7 @@ public final class CombatStatsManager implements Listener {
     }
 
     private void dropInventory(Player player, Location location) {
-        for (ItemStack item : player.getInventory().getContents()) drop(item, location);
+        for (ItemStack item : player.getInventory().getStorageContents()) drop(item, location);
         for (ItemStack item : player.getInventory().getArmorContents()) drop(item, location);
         drop(player.getInventory().getItemInOffHand(), location);
         player.getInventory().clear();
