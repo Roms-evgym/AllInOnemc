@@ -68,7 +68,7 @@ final class MissingGuiManager implements Listener {
         mainOption(p,o,"Aufträge","orders",null);
         mainOption(p,o,"Clan-Duell starten","clanduel","servertoolkit.clanduel");
         mainOption(p,o,"Fakebase platzieren","fakebase","servertoolkit.admin");
-        mainOption(p,o,"Fake-Erzader","fakore","servertoolkit.admin");
+        option(o,"Fake-Erzader","Erztyp und Anzahl eingeben",() -> prompt(p,"fakore","Gib Erztyp und optionale Anzahl ein (z. B. DIAMOND_ORE 8):"));
         mainOption(p,o,"Mace","mace",null);
         mainOption(p,o,"Server wechseln","servers",null);
         mainOption(p,o,"Voice-Chat","voice",null);
