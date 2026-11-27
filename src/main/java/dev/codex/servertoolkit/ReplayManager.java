@@ -309,6 +309,10 @@ public final class ReplayManager implements Listener {
         }
     }
 
+    public void shutdown() {
+        for (Playback playback : new ArrayList<>(playbacks.values())) stopPlayback(playback.viewer, false);
+    }
+
     private void stopPlayback(Player viewer, boolean notify) {
         Playback playback = playbacks.remove(viewer.getUniqueId());
         if (playback == null) {
