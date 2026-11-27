@@ -37,37 +37,27 @@ public final class WorldSpawnManager implements CommandExecutor {
     }
 
     private void placeFakeBase(Player player) {
-        Location forward = player.getLocation().clone().add(player.getLocation().getDirection().setY(0).normalize().multiply(6));
+        Location center = player.getLocation();
         World world = player.getWorld();
-        int x0 = forward.getBlockX() - 2;
-        int z0 = forward.getBlockZ() - 2;
-        int y0 = world.getHighestBlockYAt(forward) + 1;
+        int x0 = center.getBlockX() - 2;
+        int z0 = center.getBlockZ() - 2;
+        int y0 = Math.max(world.getMinHeight(), center.getBlockY() - 1);
 
-        // A compact 5x5 stone-brick shell with a two-block entrance.
+        // Place the complete shell at the player's current position.
+        // Existing blocks are deliberately replaced instead of aborting when space is occupied.
         for (int x = x0; x < x0 + 5; x++) {
             for (int z = z0; z < z0 + 5; z++) {
-                for (int y = y0; y <= y0 + 3; y++) {
+                for (int y = y0; y <= y0 + 3 && y < world.getMaxHeight(); y++) {
+                    boolean floorOrRoof = y == y0 || y == y0 + 3;
+                    boolean wall = x == x0 || x == x0 + 4 || z == z0 || z == z0 + 4;
                     boolean doorway = z == z0 && x == x0 + 2 && (y == y0 + 1 || y == y0 + 2);
-                    if (doorway) continue;
-                    Block block = world.getBlockAt(x, y, z);
-                    if (!block.isPassable()) {
-                        player.sendMessage(color("&cHier ist nicht genug Platz. Die Fakebase wurde nicht gebaut."));
-                        return;
+                    if (!doorway && (floorOrRoof || wall)) {
+                        world.getBlockAt(x, y, z).setType(Material.STONE_BRICKS, false);
                     }
                 }
             }
         }
-        for (int x = x0; x < x0 + 5; x++) {
-            for (int z = z0; z < z0 + 5; z++) {
-                for (int y = y0; y <= y0 + 3; y++) {
-                    boolean floorOrRoof = y == y0 || y == y0 + 3;
-                    boolean wall = x == x0 || x == x0 + 4 || z == z0 || z == z0 + 4;
-                    boolean doorway = z == z0 && x == x0 + 2 && (y == y0 + 1 || y == y0 + 2);
-                    if (!doorway && (floorOrRoof || wall)) world.getBlockAt(x, y, z).setType(Material.STONE_BRICKS, false);
-                }
-            }
-        }
-        player.sendMessage(color("&aFakebase aus Steinziegeln vor dir platziert."));
+        player.sendMessage(color("&aFakebase direkt an deiner Position platziert. Vorhandene Blöcke wurden bei Bedarf ersetzt."));
     }
 
     private void placeOreVein(Player player, String[] args) {
@@ -94,41 +84,36 @@ public final class WorldSpawnManager implements CommandExecutor {
             return;
         }
 
-        Location origin = player.getLocation();
+        // Start exactly at the player's block position and replace whatever is there.
         World world = player.getWorld();
-        int baseY = Math.max(world.getMinHeight(), origin.getBlockY() - 6);
+        Location origin = player.getLocation();
         int x = origin.getBlockX();
-        int y = baseY;
+        int y = Math.max(world.getMinHeight(), Math.min(world.getMaxHeight() - 1, origin.getBlockY()));
         int z = origin.getBlockZ();
         ThreadLocalRandom random = ThreadLocalRandom.current();
         List<Block> vein = new ArrayList<>();
+        vein.add(world.getBlockAt(x, y, z));
         int attempts = size * 40;
         while (vein.size() < size && attempts-- > 0) {
-            Block candidate = world.getBlockAt(x, y, z);
-            if (isStoneHost(candidate.getType()) && !vein.contains(candidate)) vein.add(candidate);
+            Block last = vein.get(random.nextInt(vein.size()));
+            int nextX = last.getX();
+            int nextY = last.getY();
+            int nextZ = last.getZ();
             switch (random.nextInt(6)) {
-                case 0 -> x++;
-                case 1 -> x--;
-                case 2 -> y++;
-                case 3 -> y--;
-                case 4 -> z++;
-                default -> z--;
+                case 0 -> nextX++;
+                case 1 -> nextX--;
+                case 2 -> nextY++;
+                case 3 -> nextY--;
+                case 4 -> nextZ++;
+                default -> nextZ--;
             }
-            y = Math.max(world.getMinHeight(), Math.min(world.getMaxHeight() - 1, y));
-        }
-        if (vein.isEmpty()) {
-            player.sendMessage(color("&cUnter dir wurde kein Stein oder Tiefenschiefer für die Erzader gefunden."));
-            return;
+            if (nextY < world.getMinHeight() || nextY >= world.getMaxHeight()) continue;
+            Block candidate = world.getBlockAt(nextX, nextY, nextZ);
+            if (!vein.contains(candidate)) vein.add(candidate);
         }
         for (Block block : vein) block.setType(ore, false);
         player.sendMessage(color("&a" + vein.size() + " Blöcke &f" + ore.name().toLowerCase(Locale.ROOT)
-                + " &ain eine Erzader unter dir gesetzt."));
-    }
-
-    private boolean isStoneHost(Material material) {
-        return material == Material.STONE || material == Material.DEEPSLATE
-                || material == Material.ANDESITE || material == Material.DIORITE
-                || material == Material.GRANITE || material == Material.TUFF;
+                + " &adirekt an deiner Position als Erzader platziert. Vorhandene Blöcke wurden ersetzt."));
     }
 
     private String color(String text) {
