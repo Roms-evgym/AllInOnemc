@@ -270,7 +270,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             case "ah", "order", "orders" -> marketManager.onCommand(sender, command, label, args);
             case "kit" -> kitManager.handle(player, args);
             case "sit" -> {
-                if (args.length == 0) missingGuiManager.openMain(player);
+                if (args.length > 0 && args[0].equalsIgnoreCase("gui")) missingGuiManager.openMain(player);
                 else sitManager.onCommand(sender, null, label, args);
             }
             case "banhammer" -> moderationManager.handleHammer(player, args);
