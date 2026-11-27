@@ -117,9 +117,7 @@ public final class CombatStatsManager implements Listener {
         String raw = event.getMessage().substring(1).trim();
         if (raw.isEmpty()) return;
         String root = raw.split("\\s+", 2)[0].toLowerCase(Locale.ROOT);
-        if (root.startsWith("minecraft:") || root.startsWith("bukkit:") || root.startsWith("paper:")) {
-            root = root.substring(root.indexOf(':') + 1);
-        }
+        if (root.contains(":")) root = root.substring(root.lastIndexOf(':') + 1);
         if (root.equals("ah") || root.equals("order") || root.equals("orders")) return;
         event.setCancelled(true);
         player.sendMessage(ChatColor.RED + "Du bist im Kampf! Erlaubt sind nur /ah, /order und /orders.");
@@ -136,7 +134,13 @@ public final class CombatStatsManager implements Listener {
         Player victim = event.getEntity();
         addDeath(victim.getUniqueId(), victim.getName());
         Player killer = victim.getKiller();
-        if (killer != null && !killer.equals(victim)) addKill(killer.getUniqueId(), killer.getName());
+        if (killer != null && !killer.equals(victim)) {
+            addKill(killer.getUniqueId(), killer.getName());
+        } else if (isInCombat(victim)) {
+            UUID opponentId = opponents.get(victim.getUniqueId());
+            Player opponent = opponentId == null ? null : Bukkit.getPlayer(opponentId);
+            if (opponent != null) addKill(opponent.getUniqueId(), opponent.getName());
+        }
         combatUntil.remove(victim.getUniqueId());
         opponents.remove(victim.getUniqueId());
     }
