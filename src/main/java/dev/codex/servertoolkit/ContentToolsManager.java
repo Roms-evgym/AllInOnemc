@@ -212,8 +212,11 @@ final class ContentToolsManager implements Listener {
             PlayerProfile disguised = Bukkit.createProfile(player.getUniqueId(), selectedNick);
             if (error == null && skinProfile != null && skinProfile.hasTextures()) disguised.setProperties(skinProfile.getProperties());
             else disguised.setProperties(original.getProperties());
-            nickSessions.put(player.getUniqueId(), new NickSession(original, selectedNick, selectedRank));
+            nickSessions.put(player.getUniqueId(), new NickSession(original, selectedNick, selectedRank, skinName));
             player.setPlayerProfile(disguised);
+            if (plugin.networkSyncManager() != null) {
+                plugin.networkSyncManager().publishNick(player, selectedNick, selectedRank, skinName);
+            }
             plugin.utilityManager().refreshPlayerDisplay(player);
             String rankDisplay = plugin.getConfig().getString("ranks." + selectedRank + ".display", selectedRank);
             player.sendMessage("§aDein Nick-Profil: §f" + selectedNick + " §7| §e" + rankDisplay
@@ -223,11 +226,102 @@ final class ContentToolsManager implements Listener {
     }
 
     void restoreNick(Player player) {
+        restoreNick(player, true);
+    }
+
+    private void restoreNick(Player player, boolean synchronize) {
         NickSession session = nickSessions.remove(player.getUniqueId());
         if (session == null) { player.sendMessage("§7Du bist nicht genickt."); return; }
         player.setPlayerProfile(session.originalProfile);
         plugin.utilityManager().refreshPlayerDisplay(player);
+        if (synchronize && plugin.networkSyncManager() != null) {
+            plugin.networkSyncManager().clearNick(player);
+        }
         player.sendMessage("§aDein echter Name und Skin wurden wiederhergestellt.");
+    }
+
+    void handleUnnick(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) { sender.sendMessage("§cNur im Spiel verfügbar."); return; }
+        if (args.length == 0) {
+            if (!player.hasPermission("servertoolkit.nick")) { player.sendMessage("§cKeine Berechtigung."); return; }
+            restoreNick(player);
+            return;
+        }
+        if (!player.hasPermission("servertoolkit.nick.others")) { player.sendMessage("§cKeine Berechtigung."); return; }
+        Player target = Bukkit.getPlayerExact(args[0]);
+        if (target == null) { player.sendMessage("§cSpieler nicht online."); return; }
+        restoreNick(target);
+        player.sendMessage("§aNick von " + target.getName() + " entfernt.");
+    }
+
+    boolean prankEnabled(Player player) { return isPrankEnabled(player); }
+
+    void togglePrank(Player player) {
+        boolean enabled = !isPrankEnabled(player);
+        plugin.getConfig().set("prank-enabled." + player.getUniqueId(), enabled);
+        plugin.saveConfig();
+        player.sendMessage(enabled ? "§aPranks aktiviert." : "§cPranks deaktiviert.");
+        if (!enabled) {
+            stopLag(player, "§cDeine laufende Lag-Simulation wurde beendet.");
+            Integer task = crashTasks.remove(player.getUniqueId());
+            if (task != null) {
+                Bukkit.getScheduler().cancelTask(task);
+                player.removePotionEffect(PotionEffectType.BLINDNESS);
+                player.removePotionEffect(PotionEffectType.NAUSEA);
+            }
+        }
+    }
+
+    void guiStartLag(Player target, Player actor) {
+        if (!actor.hasPermission("servertoolkit.lag")) { actor.sendMessage("§cKeine Berechtigung."); return; }
+        if (target.equals(actor) || !isPrankEnabled(target)) { actor.sendMessage("§cSpieler hat Pranks deaktiviert oder ist du selbst."); return; }
+        startLag(target, 8);
+        actor.sendMessage("§aLag-Simulation für " + target.getName() + " gestartet.");
+    }
+
+    void guiStartCrash(Player target, Player actor) {
+        if (!actor.hasPermission("servertoolkit.crash")) { actor.sendMessage("§cKeine Berechtigung."); return; }
+        if (target.equals(actor) || !isPrankEnabled(target)) { actor.sendMessage("§cSpieler hat Pranks deaktiviert oder ist du selbst."); return; }
+        startCrash(target);
+        actor.sendMessage("§aCrash-Simulation für " + target.getName() + " gestartet.");
+    }
+
+    void guiStopLag(Player target, Player actor) {
+        if (!actor.hasPermission("servertoolkit.lag")) return;
+        stopLag(target, "§aDie Lag-Simulation wurde beendet.");
+        actor.sendMessage("§aLag-Simulation für " + target.getName() + " gestoppt.");
+    }
+
+    void guiStopCrash(Player target, Player actor) {
+        if (!actor.hasPermission("servertoolkit.crash")) return;
+        Integer task = crashTasks.remove(target.getUniqueId());
+        if (task != null) Bukkit.getScheduler().cancelTask(task);
+        target.removePotionEffect(PotionEffectType.BLINDNESS);
+        target.removePotionEffect(PotionEffectType.NAUSEA);
+        target.sendMessage("§aDie Crash-Simulation wurde abgebrochen.");
+        actor.sendMessage("§aCrash-Simulation für " + target.getName() + " gestoppt.");
+    }
+
+    void applySyncedNick(Player player, String nick, String rankId, String skinName) {
+        if (nick == null || !nick.matches("[A-Za-z0-9_]{3,16}") || rankId == null
+                || !rankId.matches("[a-zA-Z0-9_-]{1,32}") || skinName == null
+                || !skinName.matches("[A-Za-z0-9_]{1,16}")) return;
+        NickSession existing = nickSessions.get(player.getUniqueId());
+        PlayerProfile original = existing == null ? player.getPlayerProfile() : existing.originalProfile;
+        PlayerProfile lookup = Bukkit.createProfile(null, skinName);
+        lookup.update().whenComplete((skinProfile, error) -> Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!player.isOnline()) return;
+            PlayerProfile disguised = Bukkit.createProfile(player.getUniqueId(), nick);
+            if (error == null && skinProfile != null && skinProfile.hasTextures()) disguised.setProperties(skinProfile.getProperties());
+            else disguised.setProperties(original.getProperties());
+            nickSessions.put(player.getUniqueId(), new NickSession(original, nick, rankId, skinName));
+            player.setPlayerProfile(disguised);
+            plugin.utilityManager().refreshPlayerDisplay(player);
+        }));
+    }
+
+    void clearSyncedNick(Player player) {
+        restoreNick(player, false);
     }
 
     String nickName(Player player) {
@@ -251,5 +345,5 @@ final class ContentToolsManager implements Listener {
     }
 
     private record LagSession(int task, Map<PotionEffectType, PotionEffect> previous) {}
-    private record NickSession(PlayerProfile originalProfile, String nick, String rankId) {}
+    private record NickSession(PlayerProfile originalProfile, String nick, String rankId, String skinName) {}
 }
