@@ -48,6 +48,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     private PlaytimeManager playtimeManager;
     private BountyManager bountyManager;
     private ContentToolsManager contentToolsManager;
+    private ContentToolsGuiManager contentToolsGuiManager;
     private AuthManager authManager;
     private final Map<java.util.UUID, Long> rtpCooldowns = new HashMap<>();
 
@@ -68,6 +69,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         playerFeaturesManager = new PlayerFeaturesManager(this);
         utilityManager = new UtilityManager(this);
         contentToolsManager = new ContentToolsManager(this);
+        contentToolsGuiManager = new ContentToolsGuiManager(this);
         networkSyncManager = new NetworkSyncManager(this);
         playtimeManager = new PlaytimeManager(this);
         bountyManager = new BountyManager(this);
@@ -81,7 +83,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         WorldSpawnManager worldSpawnManager = new WorldSpawnManager();
         for (String name : new String[]{"spawn", "setspawn", "sethome", "home", "homes", "delhome", "rtp", "clan", "clanduel", "mace",
                 "fly", "god", "invsee", "echest", "ecsee", "trash", "ranks", "rank", "voice", "ah", "order", "orders", "kit",
-                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode", "menu", "bounty", "playtime", "sit", "lag", "crash", "nick", "prank", "register", "login", "logout"}) {
+                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode", "menu", "bounty", "playtime", "sit", "lag", "crash", "nick", "unnick", "prank", "register", "login", "logout"}) {
             registerCommandBridge(name, List.of(), (sender, args) -> {
                 if (name.equals("sit")) sitManager.onCommand(sender, null, name, args);
                 else if (name.equals("fakebase") || name.equals("fakore")) worldSpawnManager.onCommand(sender, null, name, args);
@@ -147,6 +149,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             case "lag" -> { contentToolsManager.handleLag(sender, args); return true; }
             case "crash" -> { contentToolsManager.handleCrash(sender, args); return true; }
             case "nick" -> { contentToolsManager.handleNick(sender, args); return true; }
+            case "unnick" -> { contentToolsManager.handleUnnick(sender, args); return true; }
             case "prank" -> { contentToolsManager.handlePrank(sender, args); return true; }
             case "register", "login", "logout" -> { if (sender instanceof Player p) authManager.handle(p, label, args); else sender.sendMessage("Nur im Spiel verfügbar."); return true; }
             case "bounty" -> { if (sender instanceof Player p) bountyManager.handle(p, args); else sender.sendMessage("Nur im Spiel verfügbar."); return true; }
@@ -249,7 +252,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             case "setcode" -> "servertoolkit.code.create";
             case "lag" -> "servertoolkit.command.lag";
             case "crash" -> "servertoolkit.command.crash";
-            case "nick" -> "servertoolkit.nick";
+            case "nick", "unnick" -> "servertoolkit.nick";
             case "prank" -> "servertoolkit.prank.toggle";
             case "ban", "punish" -> "servertoolkit.ban";
             case "banpreset", "banrank", "banhammer" -> "servertoolkit.ban.manage";
@@ -267,6 +270,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     PlaytimeManager playtimeManager() { return playtimeManager; }
     BountyManager bountyManager() { return bountyManager; }
     ContentToolsManager contentToolsManager() { return contentToolsManager; }
+    ContentToolsGuiManager contentToolsGuiManager() { return contentToolsGuiManager; }
 
     private String[] prepend(String first, String[] rest) {
         String[] result = new String[rest.length + 1];
