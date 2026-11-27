@@ -35,7 +35,8 @@ final class ContentToolsGuiManager implements Listener {
         add(inv, 11, Material.NAME_TAG, "§aZufälligen Nick aktivieren", "nick-random");
         add(inv, 13, Material.PLAYER_HEAD, "§eEigenen Nick entfernen", "nick-restore");
         if (player.hasPermission("servertoolkit.nick.others")) {
-            add(inv, 15, Material.WRITABLE_BOOK, "§bSpieler auswählen", "nick-targets");
+            add(inv, 15, Material.WRITABLE_BOOK, "§bSpieler nicken", "nick-targets");
+            add(inv, 17, Material.BARRIER, "§cNick eines Spielers entfernen", "unnick-targets");
         }
         player.openInventory(inv);
     }
@@ -54,6 +55,7 @@ final class ContentToolsGuiManager implements Listener {
     void openTargets(Player actor, String type) {
         MenuHolder holder = new MenuHolder();
         Inventory inv = Bukkit.createInventory(holder, 54, type.equals("nick") ? "§8Nick: Spieler auswählen"
+                : type.equals("unnick") ? "§8Unnick: Spieler auswählen"
                 : type.equals("lag") ? "§8Lag-Simulation: Ziel" : "§8Crash-Simulation: Ziel");
         holder.inventory = inv;
         int slot = 0;
@@ -115,6 +117,7 @@ final class ContentToolsGuiManager implements Listener {
                 actor.closeInventory();
             }
             case "nick-targets" -> openTargets(actor, "nick");
+            case "unnick-targets" -> openTargets(actor, "unnick");
             case "prank-toggle" -> {
                 if (actor.hasPermission("servertoolkit.prank.toggle")) tools.togglePrank(actor);
                 actor.closeInventory();
@@ -138,6 +141,8 @@ final class ContentToolsGuiManager implements Listener {
                 if (target == null) { actor.sendMessage("§cSpieler ist nicht mehr online."); actor.closeInventory(); return; }
                 if (type.equals("nick")) {
                     if (actor.hasPermission("servertoolkit.nick.others")) tools.applyNickFromGui(target, actor);
+                } else if (type.equals("unnick")) {
+                    if (actor.hasPermission("servertoolkit.nick.others")) tools.restoreNickFromGui(target, actor);
                 } else if (type.equals("lag")) {
                     tools.guiStartLag(target, actor);
                 } else if (type.equals("crash")) {
