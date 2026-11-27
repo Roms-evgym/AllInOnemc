@@ -73,6 +73,11 @@ final class ContentToolsGuiManager implements Listener {
                 head.setItemMeta(meta);
             }
             inv.setItem(slot++, head);
+            if (slot < 45 && type.equals("lag") && plugin.contentToolsManager().hasLag(target.getUniqueId())) {
+                add(inv, slot++, Material.REDSTONE_BLOCK, "§cLag bei " + target.getName() + " stoppen", "stop-lag:" + target.getUniqueId());
+            } else if (slot < 45 && type.equals("crash") && plugin.contentToolsManager().hasCrash(target.getUniqueId())) {
+                add(inv, slot++, Material.BARRIER, "§cCrash bei " + target.getName() + " stoppen", "stop-crash:" + target.getUniqueId());
+            }
         }
         add(inv, 49, Material.ARROW, "§7Zurück", "back-" + type);
         actor.openInventory(inv);
@@ -137,6 +142,10 @@ final class ContentToolsGuiManager implements Listener {
                     tools.guiStartLag(target, actor);
                 } else if (type.equals("crash")) {
                     tools.guiStartCrash(target, actor);
+                } else if (type.equals("stop-lag")) {
+                    tools.guiStopLag(target, actor);
+                } else if (type.equals("stop-crash")) {
+                    tools.guiStopCrash(target, actor);
                 }
                 actor.closeInventory();
             }
