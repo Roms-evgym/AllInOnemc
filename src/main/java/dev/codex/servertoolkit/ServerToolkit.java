@@ -50,6 +50,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     private ContentToolsManager contentToolsManager;
     private ContentToolsGuiManager contentToolsGuiManager;
     private MissingGuiManager missingGuiManager;
+    private SubcommandDialogManager subcommandDialogManager;
     private AuthManager authManager;
     private final Map<java.util.UUID, Long> rtpCooldowns = new HashMap<>();
 
@@ -77,6 +78,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         bountyManager = new BountyManager(this);
         redeemCodeManager = new RedeemCodeManager(this);
         popupMenuManager = new PopupMenuManager(this);
+        subcommandDialogManager = new SubcommandDialogManager(this);
         marketManager = new MarketManager(this);
         kitManager = new KitManager(this);
         moderationManager = new ModerationManager(this);
@@ -143,6 +145,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (sender instanceof Player p && args.length == 0 && subcommandDialogManager.openIfRoot(p, label)) return true;
         switch (label.toLowerCase(java.util.Locale.ROOT)) {
             case "menu" -> {
                 if (sender instanceof Player p) missingGuiManager.openMain(p);
