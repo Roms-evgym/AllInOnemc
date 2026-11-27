@@ -627,6 +627,8 @@ public final class UtilityManager implements CommandExecutor, Listener {
                     && plugin.contentToolsManager().nickName(target) != null;
             String displayRank = targetNicked && plugin.contentToolsManager().nickRankId(target) != null
                     ? plugin.contentToolsManager().nickRankId(target) : getRankId(target);
+            String nickName = targetNicked ? plugin.contentToolsManager().nickName(target) : null;
+            String shownPlayerName = nickName == null || nickName.isBlank() ? target.getName() : nickName;
             String headPrefix = rankPrefix(displayRank) + " ";
             String clan = plugin.clanManager() == null ? null
                     : plugin.clanManager().clanName(target.getUniqueId());
@@ -637,7 +639,9 @@ public final class UtilityManager implements CommandExecutor, Listener {
             var team = board.registerNewTeam(teamName);
             team.setPrefix(headPrefix);
             team.setSuffix(headSuffix);
-            team.addEntry(target.getName());
+            // The client uses the disguised profile name as the scoreboard entry.
+            // Using the real account name means the team prefix/suffix won't attach to nicked players.
+            team.addEntry(shownPlayerName);
         }
         boolean nicked = plugin.contentToolsManager() != null
                 && plugin.contentToolsManager().nickName(player) != null;
