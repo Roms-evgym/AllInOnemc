@@ -43,6 +43,7 @@ final class MissingGuiManager implements Listener {
         add(menu, 15, Material.LIME_DYE, "§aAnfrage annehmen", "tpaccept");
         add(menu, 16, Material.RED_DYE, "§cAnfrage ablehnen", "tpdeny");
         add(menu, 17, Material.COMPASS, "§aZum Spawn", "spawn");
+        if (p.hasPermission("servertoolkit.lag")) add(menu, 18, Material.CLOCK, "§cLag-Simulation", "lag");
         add(menu, 19, Material.PAPER, "§eCode einlösen", "code");
         if (p.hasPermission("servertoolkit.code.create")) add(menu, 20, Material.WRITABLE_BOOK, "§6Codes erstellen", "setcode");
         add(menu, 21, Material.FEATHER, "§bFly umschalten", "fly");
@@ -50,7 +51,8 @@ final class MissingGuiManager implements Listener {
         add(menu, 23, Material.PLAYER_HEAD, "§eHinsetzen / Aufstehen", "sit");
         add(menu, 24, Material.COMPASS, "§aZur Lobby", "hub");
         add(menu, 25, Material.ENDER_CHEST, "§5Eigene Enderchest", "echest");
-        add(menu, 26, Material.MACE, "§cBanhammer-Menü", "banhammer");
+        if (p.hasPermission("servertoolkit.ban.manage")) add(menu, 26, Material.MACE, "§cBanhammer-Menü", "banhammer");
+        if (p.hasPermission("servertoolkit.crash")) add(menu, 27, Material.BARRIER, "§cCrash-Simulation", "crash");
         add(menu, 28, Material.CHEST, "§6Shop", "shop");
         add(menu, 29, Material.HOPPER, "§eVerkaufen", "sell");
         add(menu, 30, Material.SHIELD, "§bClans", "clan");
@@ -293,7 +295,7 @@ final class MissingGuiManager implements Listener {
             case "tpa" -> openTargets(p, "tpa");
             case "balance" -> openMoney(p);
             case "tpaccept", "tpdeny", "sit", "hub", "setspawn", "spawn", "echest", "shop", "sell", "clan", "kit", "ranks",
-                    "ah", "orders", "mace", "servers", "voice", "nick", "prank", "banrank", "vanish", "clanduel", "fakebase" -> {
+                    "ah", "orders", "mace", "servers", "voice", "nick", "prank", "banrank", "vanish", "clanduel", "fakebase", "lag", "crash" -> {
                 p.performCommand(action);
                 p.closeInventory();
             }
