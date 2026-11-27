@@ -111,6 +111,8 @@ final class MissingGuiManager implements Listener {
             case "playtime" -> "§8Spielzeit – Spieler auswählen";
             case "fly" -> "§8Fly – Spieler auswählen";
             case "god" -> "§8God – Spieler auswählen";
+            case "lag" -> "§8Lag-Simulation – Ziel";
+            case "crash" -> "§8Crash-Simulation – Ziel";
             case "eco-give", "eco-take", "eco-set" -> "§8Geldverwaltung – Spieler";
             default -> "§8Spieler auswählen";
         };
@@ -337,6 +339,8 @@ final class MissingGuiManager implements Listener {
                         case "tpa" -> { p.performCommand("tpa " + target.getName()); p.closeInventory(); }
                         case "playtime" -> { p.performCommand("playtime " + target.getName()); p.closeInventory(); }
                         case "fly", "god", "invsee", "ecsee" -> { p.performCommand(parts[1] + " " + target.getName()); p.closeInventory(); }
+                        case "lag" -> { plugin.contentToolsManager().guiStartLag(target, p); p.closeInventory(); }
+                        case "crash" -> { plugin.contentToolsManager().guiStartCrash(target, p); p.closeInventory(); }
                         case "ban" -> prompt(p, "ban-reason:" + target.getName(), "Gib den Ban-Grund für " + target.getName() + " ein:");
                         case "punish" -> prompt(p, "punish-preset:" + target.getName(), "Gib die Preset-ID für " + target.getName() + " ein:");
                         default -> { }
