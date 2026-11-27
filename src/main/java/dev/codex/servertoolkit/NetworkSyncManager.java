@@ -42,6 +42,23 @@ public final class NetworkSyncManager implements Listener, PluginMessageListener
             out.writeUTF(plugin.economyManager().balance(player.getUniqueId()).toPlainString());
         });
     }
+    public void publishNick(Player player, String nick, String rankId, String skinName) {
+        if (player == null || !player.isOnline() || nick == null || rankId == null || skinName == null) return;
+        send(player, out -> {
+            out.writeUTF("NICK_SET");
+            out.writeUTF(player.getUniqueId().toString());
+            out.writeUTF(nick);
+            out.writeUTF(rankId);
+            out.writeUTF(skinName);
+        });
+    }
+    public void clearNick(Player player) {
+        if (player == null || !player.isOnline()) return;
+        send(player, out -> {
+            out.writeUTF("NICK_CLEAR");
+            out.writeUTF(player.getUniqueId().toString());
+        });
+    }
     public void addPlaytime(Player player, long seconds) {
         if (player == null || !player.isOnline() || seconds < 1) return;
         send(player, out -> { out.writeUTF("PLAYTIME_ADD"); out.writeUTF(player.getUniqueId().toString()); out.writeLong(seconds); });
@@ -67,6 +84,21 @@ public final class NetworkSyncManager implements Listener, PluginMessageListener
             if ("REQUEST_ALL".equals(operation)) {
                 if (in.available() != 0) return;
                 for (Player online : Bukkit.getOnlinePlayers()) publish(online);
+                return;
+            }
+            if ("NICK_SYNC".equals(operation)) {
+                UUID targetId = UUID.fromString(in.readUTF());
+                String nick = in.readUTF();
+                String rankId = in.readUTF();
+                String skinName = in.readUTF();
+                if (in.available() != 0 || !targetId.equals(carrier.getUniqueId())) return;
+                plugin.contentToolsManager().applySyncedNick(carrier, nick, rankId, skinName);
+                return;
+            }
+            if ("NICK_CLEAR".equals(operation)) {
+                UUID targetId = UUID.fromString(in.readUTF());
+                if (in.available() != 0 || !targetId.equals(carrier.getUniqueId())) return;
+                plugin.contentToolsManager().clearSyncedNick(carrier);
                 return;
             }
             if ("BOUNTY_REWARD".equals(operation)) {
