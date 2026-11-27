@@ -14,7 +14,14 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerItemConsumeEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
+import org.bukkit.entity.Projectile;
+import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitTask;
@@ -39,7 +46,7 @@ import java.util.UUID;
  */
 public final class ReplayManager implements Listener {
     private static final long WINDOW_MS = 10 * 60 * 1000L;
-    private static final long SAMPLE_TICKS = 10L;
+    private static final long SAMPLE_TICKS = 4L;
     private static final int MAX_EVENTS = 3000;
 
     private final ServerToolkit plugin;
@@ -71,7 +78,7 @@ public final class ReplayManager implements Listener {
 
     private void trimFrames(Deque<Frame> track, long now) {
         while (!track.isEmpty() && now - track.peekFirst().time() > WINDOW_MS) track.removeFirst();
-        while (track.size() > 1250) track.removeFirst();
+        while (track.size() > 3000) track.removeFirst();
     }
 
     private void trimAllEvents(long now) {
@@ -98,6 +105,48 @@ public final class ReplayManager implements Listener {
         if (event.getEntity() instanceof Player player && event.getFinalDamage() > 0) {
             recordEvent(player, "DAMAGE", String.format(Locale.US, "%.1f", event.getFinalDamage()), player.getLocation());
         }
+    }
+
+    @EventHandler
+    public void onCombatDamage(EntityDamageByEntityEvent event) {
+        if (!(event.getEntity() instanceof Player victim) || event.getFinalDamage() <= 0) return;
+        Player attacker = event.getDamager() instanceof Player direct ? direct : null;
+        if (attacker == null && event.getDamager() instanceof Projectile projectile) {
+            ProjectileSource source = projectile.getShooter();
+            if (source instanceof Player shooter) attacker = shooter;
+        }
+        if (attacker == null || attacker.equals(victim)) return;
+        String damage = String.format(Locale.US, "%.1f", event.getFinalDamage());
+        recordEvent(victim, "COMBAT_HURT", attacker.getName() + " (" + damage + ")", victim.getLocation());
+        recordEvent(attacker, "COMBAT_HIT", victim.getName() + " (" + damage + ")", attacker.getLocation());
+    }
+
+    @EventHandler
+    public void onDeath(PlayerDeathEvent event) {
+        recordEvent(event.getEntity(), "DEATH",
+                event.getDeathMessage() == null ? "Gestorben" : event.getDeathMessage(),
+                event.getEntity().getLocation());
+    }
+
+    @EventHandler
+    public void onInteract(PlayerInteractEvent event) {
+        Player player = event.getPlayer();
+        String detail = event.getItem() != null && !event.getItem().getType().isAir()
+                ? event.getItem().getType().name()
+                : event.getClickedBlock() == null ? event.getAction().name()
+                : event.getClickedBlock().getType().name();
+        recordEvent(player, "INTERACT", detail, player.getLocation());
+    }
+
+    @EventHandler
+    public void onConsume(PlayerItemConsumeEvent event) {
+        recordEvent(event.getPlayer(), "ITEM_USE", event.getItem().getType().name(), event.getPlayer().getLocation());
+    }
+
+    @EventHandler
+    public void onDrop(PlayerDropItemEvent event) {
+        recordEvent(event.getPlayer(), "ITEM_DROP", event.getItemDrop().getItemStack().getType().name(),
+                event.getPlayer().getLocation());
     }
 
     private void recordEvent(Player player, String type, String detail, Location location) {
@@ -288,6 +337,19 @@ public final class ReplayManager implements Listener {
             return;
         }
         Location location = frame.location(world);
+        if (index + 1 < playback.frames.size()) {
+            Frame next = playback.frames.get(index + 1);
+            if (next.world().equals(frame.world()) && next.time() > frame.time()) {
+                double progress = Math.max(0.0, Math.min(1.0,
+                        (double) (elapsed - frame.time()) / (double) (next.time() - frame.time())));
+                location = new Location(world,
+                        frame.x() + (next.x() - frame.x()) * progress,
+                        frame.y() + (next.y() - frame.y()) * progress,
+                        frame.z() + (next.z() - frame.z()) * progress,
+                        interpolateAngle(frame.yaw(), next.yaw(), progress),
+                        interpolateAngle(frame.pitch(), next.pitch(), progress));
+            }
+        }
         playback.ghost.teleport(location);
         if (playback.appliedFrame != index) {
             applyEquipment(playback.ghost, frame);
@@ -336,10 +398,16 @@ public final class ReplayManager implements Listener {
         if (playback != null) stopPlayback(event.getPlayer(), false);
     }
 
+    private static float interpolateAngle(float from, float to, double progress) {
+        float difference = ((to - from + 540.0f) % 360.0f) - 180.0f;
+        return (float) (from + difference * progress);
+    }
+
     private static void applyEquipment(ArmorStand stand, Frame frame) {
         EntityEquipment equipment = stand.getEquipment();
         if (equipment == null) return;
         equipment.setItemInMainHand(cloneOrAir(frame.mainHand()));
+        equipment.setItemInOffHand(cloneOrAir(frame.offHand()));
         equipment.setHelmet(cloneOrAir(frame.helmet()));
         equipment.setChestplate(cloneOrAir(frame.chestplate()));
         equipment.setLeggings(cloneOrAir(frame.leggings()));
@@ -356,14 +424,14 @@ public final class ReplayManager implements Listener {
     }
 
     private record Frame(long time, String world, double x, double y, double z, float yaw, float pitch,
-                         double health, ItemStack mainHand, ItemStack helmet, ItemStack chestplate,
+                         double health, ItemStack mainHand, ItemStack offHand, ItemStack helmet, ItemStack chestplate,
                          ItemStack leggings, ItemStack boots) {
         static Frame capture(Player player, long time) {
             Location location = player.getLocation();
             var inventory = player.getInventory();
             return new Frame(time, location.getWorld().getName(), location.getX(), location.getY(), location.getZ(),
                     location.getYaw(), location.getPitch(), player.getHealth(),
-                    inventory.getItemInMainHand().clone(), cloneOrNull(inventory.getHelmet()),
+                    inventory.getItemInMainHand().clone(), inventory.getItemInOffHand().clone(), cloneOrNull(inventory.getHelmet()),
                     cloneOrNull(inventory.getChestplate()), cloneOrNull(inventory.getLeggings()),
                     cloneOrNull(inventory.getBoots()));
         }
@@ -373,7 +441,7 @@ public final class ReplayManager implements Listener {
             Map<String, Object> map = new HashMap<>();
             map.put("time", time - base); map.put("world", world); map.put("x", x); map.put("y", y); map.put("z", z);
             map.put("yaw", yaw); map.put("pitch", pitch); map.put("health", health);
-            map.put("main", mainHand); map.put("helmet", helmet); map.put("chestplate", chestplate);
+            map.put("main", mainHand); map.put("offhand", offHand); map.put("helmet", helmet); map.put("chestplate", chestplate);
             map.put("leggings", leggings); map.put("boots", boots);
             return map;
         }
@@ -382,7 +450,7 @@ public final class ReplayManager implements Listener {
                 return new Frame(number(map, "time").longValue(), String.valueOf(map.get("world")),
                         number(map, "x").doubleValue(), number(map, "y").doubleValue(), number(map, "z").doubleValue(),
                         number(map, "yaw").floatValue(), number(map, "pitch").floatValue(),
-                        number(map, "health").doubleValue(), item(map.get("main")), item(map.get("helmet")),
+                        number(map, "health").doubleValue(), item(map.get("main")), item(map.get("offhand")), item(map.get("helmet")),
                         item(map.get("chestplate")), item(map.get("leggings")), item(map.get("boots")));
             } catch (Exception ex) { return null; }
         }
