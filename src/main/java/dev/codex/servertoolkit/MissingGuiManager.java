@@ -42,12 +42,15 @@ final class MissingGuiManager implements Listener {
         add(menu, 14, Material.ENDER_PEARL, "§bTeleport-Anfrage", "tpa");
         add(menu, 15, Material.LIME_DYE, "§aAnfrage annehmen", "tpaccept");
         add(menu, 16, Material.RED_DYE, "§cAnfrage ablehnen", "tpdeny");
+        add(menu, 17, Material.COMPASS, "§aZum Spawn", "spawn");
         add(menu, 19, Material.PAPER, "§eCode einlösen", "code");
         if (p.hasPermission("servertoolkit.code.create")) add(menu, 20, Material.WRITABLE_BOOK, "§6Codes erstellen", "setcode");
         add(menu, 21, Material.FEATHER, "§bFly umschalten", "fly");
         add(menu, 22, Material.TOTEM_OF_UNDYING, "§dGod-Modus", "god");
         add(menu, 23, Material.PLAYER_HEAD, "§eHinsetzen / Aufstehen", "sit");
         add(menu, 24, Material.COMPASS, "§aZur Lobby", "hub");
+        add(menu, 25, Material.ENDER_CHEST, "§5Eigene Enderchest", "echest");
+        add(menu, 26, Material.MACE, "§cBanhammer-Menü", "banhammer");
         add(menu, 28, Material.CHEST, "§6Shop", "shop");
         add(menu, 29, Material.HOPPER, "§eVerkaufen", "sell");
         add(menu, 30, Material.SHIELD, "§bClans", "clan");
@@ -55,6 +58,11 @@ final class MissingGuiManager implements Listener {
         add(menu, 32, Material.NAME_TAG, "§dRänge", "ranks");
         add(menu, 33, Material.DIAMOND, "§6Auktionshaus", "ah");
         add(menu, 34, Material.WRITABLE_BOOK, "§eAufträge", "orders");
+        if (p.hasPermission("servertoolkit.clanduel")) add(menu, 35, Material.IRON_SWORD, "§cClan-Duell starten", "clanduel");
+        if (p.hasPermission("servertoolkit.admin")) {
+            add(menu, 36, Material.CRAFTING_TABLE, "§6Fakebase platzieren", "fakebase");
+            add(menu, 52, Material.IRON_ORE, "§6Fake-Erzader", "fakore");
+        }
         add(menu, 37, Material.MACE, "§cMace", "mace");
         add(menu, 38, Material.ENDER_EYE, "§bServer wechseln", "servers");
         add(menu, 39, Material.NOTE_BLOCK, "§dVoice-Chat", "voice");
@@ -221,6 +229,13 @@ final class MissingGuiManager implements Listener {
                 player.performCommand("setcode " + parts[2] + " " + parts[1] + " " + value);
                 return;
             }
+            if (action.equals("fakore")) {
+                if (!input.matches("[A-Za-z0-9_]{2,32}( [1-9][0-9]{0,2})?")) {
+                    player.sendMessage("§cUngültig. Beispiel: DIAMOND_ORE 8"); return;
+                }
+                player.performCommand("fakore " + input);
+                return;
+            }
             if (action.startsWith("ban-reason:")) {
                 String reason = input.replaceAll("[^A-Za-z0-9 _.,!?-]", "");
                 if (reason.isBlank() || reason.length() > 100) { player.sendMessage("§cUngültiger Grund."); return; }
@@ -277,12 +292,13 @@ final class MissingGuiManager implements Listener {
             case "homes-delete" -> openHomes(p, true);
             case "tpa" -> openTargets(p, "tpa");
             case "balance" -> openMoney(p);
-            case "tpaccept", "tpdeny", "sit", "hub", "setspawn", "shop", "sell", "clan", "kit", "ranks",
-                    "ah", "orders", "mace", "servers", "voice", "nick", "prank", "banrank", "vanish" -> {
+            case "tpaccept", "tpdeny", "sit", "hub", "setspawn", "spawn", "echest", "shop", "sell", "clan", "kit", "ranks",
+                    "ah", "orders", "mace", "servers", "voice", "nick", "prank", "banrank", "vanish", "clanduel", "fakebase" -> {
                 p.performCommand(action);
                 p.closeInventory();
             }
-            case "banpreset" -> { p.performCommand("banpreset gui"); p.closeInventory(); }
+            case "banpreset", "banhammer" -> { p.performCommand("banpreset gui"); p.closeInventory(); }
+            case "fakore" -> prompt(p, "fakore", "Gib Erztyp und optionale Anzahl ein (z. B. DIAMOND_ORE 8):");
             case "code" -> openCode(p);
             case "setcode" -> openSetCode(p);
             case "setcode-rank" -> prompt(p, "setcode-code:rank", "Gib den neuen Code ein:");
