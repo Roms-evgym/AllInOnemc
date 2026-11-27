@@ -36,8 +36,6 @@ final class MissingGuiManager implements Listener {
     void openMain(Player p) {
         Menu menu = menu("§8AllInOne – Funktionen", 54);
         if (plugin.getConfig().getString("mode", "LOBBY").equalsIgnoreCase("LOBBY")) {
-            add(menu, 6, Material.WRITABLE_BOOK, "§aAccount registrieren", "register");
-            add(menu, 7, Material.TRIPWIRE_HOOK, "§eEinloggen", "login");
             add(menu, 8, Material.BARRIER, "§cAbmelden", "logout");
         }
         add(menu, 10, Material.GOLD_INGOT, "§6Geld & Überweisen", "money");
@@ -221,26 +219,6 @@ final class MissingGuiManager implements Listener {
                 player.performCommand("sethome " + name);
                 return;
             }
-            if (action.equals("auth-login")) {
-                if (input.isBlank() || input.length() > 128 || input.contains(" ")) {
-                    player.sendMessage("§cUngültiges Passwortformat."); return;
-                }
-                player.performCommand("login " + input);
-                return;
-            }
-            if (action.equals("auth-register")) {
-                if (input.length() < 10 || input.length() > 128 || input.contains(" ")) {
-                    player.sendMessage("§cDas Passwort muss 10–128 Zeichen ohne Leerzeichen haben."); return;
-                }
-                prompt(player, "auth-register-confirm:" + input, "Wiederhole dein Passwort:");
-                return;
-            }
-            if (action.startsWith("auth-register-confirm:")) {
-                String password = action.substring("auth-register-confirm:".length());
-                if (!input.equals(password)) { player.sendMessage("§cPasswörter stimmen nicht überein."); return; }
-                player.performCommand("register " + password + " " + input);
-                return;
-            }
             if (action.startsWith("code")) {
                 String code = safeToken(input);
                 if (code == null) { player.sendMessage("§cUngültiger Code."); return; }
@@ -335,8 +313,6 @@ final class MissingGuiManager implements Listener {
             }
             case "banpreset", "banhammer" -> { p.performCommand("banpreset gui"); p.closeInventory(); }
             case "fakore" -> prompt(p, "fakore", "Gib Erztyp und optionale Anzahl ein (z. B. DIAMOND_ORE 8):");
-            case "register" -> prompt(p, "auth-register", "Gib dein neues Passwort ein:");
-            case "login" -> prompt(p, "auth-login", "Gib dein Passwort ein:");
             case "logout" -> { p.performCommand("logout"); p.closeInventory(); }
             case "code" -> openCode(p);
             case "setcode" -> openSetCode(p);
