@@ -35,6 +35,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Lobby-only account authentication. Passwords are stored as PBKDF2 hashes;
@@ -54,6 +55,7 @@ public final class AuthManager implements Listener, PluginMessageListener {
     private final Set<UUID> authenticated = new HashSet<>();
     private final Map<UUID, Integer> failedAttempts = new HashMap<>();
     private final Map<UUID, Long> lockedUntil = new HashMap<>();
+    private final Set<UUID> processing = ConcurrentHashMap.newKeySet();
 
     public AuthManager(ServerToolkit plugin) {
         this.plugin = plugin;
@@ -78,8 +80,13 @@ public final class AuthManager implements Listener, PluginMessageListener {
     }
 
     private void register(Player player, String[] args) {
+        UUID id = player.getUniqueId();
         if (isAuthenticated(player)) {
             player.sendMessage(color("&aDu bist bereits angemeldet."));
+            return;
+        }
+        if (processing.contains(id)) {
+            player.sendMessage(color("&eDeine Anmeldung wird gerade geprüft. Bitte warte kurz."));
             return;
         }
         if (hasAccount(player)) {
@@ -100,32 +107,53 @@ public final class AuthManager implements Listener, PluginMessageListener {
         }
         byte[] salt = new byte[16];
         random.nextBytes(salt);
-        byte[] hash = hash(args[0].toCharArray(), salt);
-        if (hash == null) {
-            player.sendMessage(color("&cDie Passwortverschlüsselung ist fehlgeschlagen. Bitte melde dich beim Team."));
-            return;
-        }
-        String path = accountPath(player);
-        data.set(path + ".name", player.getName());
-        data.set(path + ".salt", Base64.getEncoder().encodeToString(salt));
-        data.set(path + ".hash", Base64.getEncoder().encodeToString(hash));
-        data.set(path + ".algorithm", "PBKDF2WithHmacSHA256");
-        data.set(path + ".iterations", ITERATIONS);
-        save();
-        completeLogin(player);
-        player.sendMessage(color("&aDein Konto wurde erstellt und du bist jetzt angemeldet."));
+        char[] password = args[0].toCharArray();
+        processing.add(id);
+        player.sendMessage(color("&7Konto wird sicher eingerichtet ..."));
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            byte[] hashed = hash(password, salt);
+            plugin.getServer().getScheduler().runTask(plugin, () -> {
+                processing.remove(id);
+                if (!player.isOnline()) return;
+                if (hashed == null) {
+                    player.sendMessage(color("&cDie Passwortverschlüsselung ist fehlgeschlagen. Bitte melde dich beim Team."));
+                    return;
+                }
+                if (hasAccount(player)) {
+                    player.sendMessage(color("&cFür dich existiert bereits ein Konto. Nutze /login."));
+                    return;
+                }
+                String path = accountPath(player);
+                data.set(path + ".name", player.getName());
+                data.set(path + ".salt", Base64.getEncoder().encodeToString(salt));
+                data.set(path + ".hash", Base64.getEncoder().encodeToString(hashed));
+                data.set(path + ".algorithm", "PBKDF2WithHmacSHA256");
+                data.set(path + ".iterations", ITERATIONS);
+                data.set("security." + id, null);
+                save();
+                failedAttempts.remove(id);
+                lockedUntil.remove(id);
+                completeLogin(player);
+                player.sendMessage(color("&aDein Konto wurde erstellt und du bist jetzt angemeldet."));
+            });
+        });
     }
 
     private void login(Player player, String[] args) {
+        UUID id = player.getUniqueId();
         if (isAuthenticated(player)) {
             player.sendMessage(color("&aDu bist bereits angemeldet."));
+            return;
+        }
+        if (processing.contains(id)) {
+            player.sendMessage(color("&eDeine Anmeldung wird gerade geprüft. Bitte warte kurz."));
             return;
         }
         if (!hasAccount(player)) {
             player.sendMessage(color("&cDu hast noch kein Konto. Nutze &f/register <Passwort> <Passwort-wiederholen>&c."));
             return;
         }
-        long lock = lockedUntil.getOrDefault(player.getUniqueId(), 0L);
+        long lock = Math.max(lockedUntil.getOrDefault(id, 0L), data.getLong("security." + id + ".locked-until"));
         if (lock > System.currentTimeMillis()) {
             player.sendMessage(color("&cZu viele Fehlversuche. Warte " + ((lock - System.currentTimeMillis() + 999) / 1000) + " Sekunden."));
             return;
@@ -135,28 +163,52 @@ public final class AuthManager implements Listener, PluginMessageListener {
             return;
         }
         String path = accountPath(player);
+        final byte[] salt;
+        final byte[] expected;
         try {
-            byte[] salt = Base64.getDecoder().decode(data.getString(path + ".salt", ""));
-            byte[] expected = Base64.getDecoder().decode(data.getString(path + ".hash", ""));
-            byte[] actual = hash(args[0].toCharArray(), salt);
-            if (actual != null && MessageDigest.isEqual(expected, actual)) {
-                failedAttempts.remove(player.getUniqueId());
-                lockedUntil.remove(player.getUniqueId());
-                completeLogin(player);
-                player.sendMessage(color("&aErfolgreich angemeldet. Willkommen zurück!"));
-                return;
-            }
-        } catch (IllegalArgumentException ignored) {
-            plugin.getLogger().warning("Invalid auth data for " + player.getUniqueId());
+            salt = Base64.getDecoder().decode(data.getString(path + ".salt", ""));
+            expected = Base64.getDecoder().decode(data.getString(path + ".hash", ""));
+        } catch (IllegalArgumentException ex) {
+            plugin.getLogger().warning("Invalid auth data for " + id);
+            player.sendMessage(color("&cDeine Kontodaten sind beschädigt. Bitte kontaktiere das Team."));
+            return;
         }
-        int attempts = failedAttempts.merge(player.getUniqueId(), 1, Integer::sum);
-        if (attempts >= MAX_ATTEMPTS) {
-            failedAttempts.remove(player.getUniqueId());
-            lockedUntil.put(player.getUniqueId(), System.currentTimeMillis() + LOCK_MILLIS);
-            player.sendMessage(color("&cZu viele falsche Passwörter. Anmeldung für 60 Sekunden gesperrt."));
-        } else {
-            player.sendMessage(color("&cFalsches Passwort. Versuche: " + attempts + "/" + MAX_ATTEMPTS));
-        }
+        char[] password = args[0].toCharArray();
+        processing.add(id);
+        player.sendMessage(color("&7Passwort wird geprüft ..."));
+        plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
+            byte[] actual = hash(password, salt);
+            boolean valid = actual != null && MessageDigest.isEqual(expected, actual);
+            plugin.getServer().getScheduler().runTask(plugin, () -> {
+                processing.remove(id);
+                if (!player.isOnline()) return;
+                if (valid) {
+                    failedAttempts.remove(id);
+                    lockedUntil.remove(id);
+                    data.set("security." + id, null);
+                    save();
+                    completeLogin(player);
+                    player.sendMessage(color("&aErfolgreich angemeldet. Willkommen zurück!"));
+                    return;
+                }
+                int attempts = Math.max(failedAttempts.getOrDefault(id, 0),
+                        data.getInt("security." + id + ".failed-attempts", 0)) + 1;
+                if (attempts >= MAX_ATTEMPTS) {
+                    attempts = 0;
+                    long until = System.currentTimeMillis() + LOCK_MILLIS;
+                    lockedUntil.put(id, until);
+                    data.set("security." + id + ".failed-attempts", attempts);
+                    data.set("security." + id + ".locked-until", until);
+                    save();
+                    player.sendMessage(color("&cZu viele falsche Passwörter. Anmeldung für 60 Sekunden gesperrt."));
+                } else {
+                    failedAttempts.put(id, attempts);
+                    data.set("security." + id + ".failed-attempts", attempts);
+                    save();
+                    player.sendMessage(color("&cFalsches Passwort. Versuche: " + attempts + "/" + MAX_ATTEMPTS));
+                }
+            });
+        });
     }
 
     private void logout(Player player) {
@@ -243,8 +295,6 @@ public final class AuthManager implements Listener, PluginMessageListener {
     public void onJoin(PlayerJoinEvent event) {
         if (!plugin.isLobbyMode()) return;
         Player player = event.getPlayer();
-        failedAttempts.remove(player.getUniqueId());
-        lockedUntil.remove(player.getUniqueId());
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             if (!player.isOnline()) return;
             if (hasAccount(player)) {
@@ -259,8 +309,6 @@ public final class AuthManager implements Listener, PluginMessageListener {
     public void onQuit(PlayerQuitEvent event) {
         UUID id = event.getPlayer().getUniqueId();
         authenticated.remove(id);
-        failedAttempts.remove(id);
-        lockedUntil.remove(id);
     }
 
     private boolean blocked(Player player) {
