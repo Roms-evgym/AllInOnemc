@@ -30,6 +30,9 @@ commands:
   playtime:
     description: Zeigt die serverübergreifende Spielzeit.
     usage: /playtime [Spieler]
+  stats:
+    description: Zeigt Kills, Tode und Spielzeit.
+    usage: /stats [Spieler]
   report:
     description: Sichert die letzten zehn Minuten eines Spielers als Cheat-Report.
     usage: /report <Spieler> [Grund]
@@ -279,6 +282,12 @@ permissions:
   servertoolkit.command.bounty:
     description: Darf den Befehl /bounty verwenden.
     default: true
+  servertoolkit.command.stats:
+    description: Darf Spielerstatistiken ansehen.
+    default: true
+  servertoolkit.combat.bypass:
+    description: Darf Kampf-Befehlsbeschränkungen umgehen.
+    default: op
   servertoolkit.command.playtime:
     description: Darf den Befehl /playtime verwenden.
     default: true
