@@ -87,8 +87,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
                 "fly", "god", "invsee", "echest", "ecsee", "trash", "ranks", "rank", "voice", "ah", "order", "orders", "kit",
                 "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode", "menu", "bounty", "playtime", "sit", "lag", "crash", "nick", "unnick", "prank", "register", "login", "logout"}) {
             registerCommandBridge(name, List.of(), (sender, args) -> {
-                if (name.equals("sit")) sitManager.onCommand(sender, null, name, args);
-                else if (name.equals("fakebase") || name.equals("fakore")) worldSpawnManager.onCommand(sender, null, name, args);
+                if (name.equals("fakebase") || name.equals("fakore")) worldSpawnManager.onCommand(sender, null, name, args);
                 else onCommand(sender, null, name, args);
             });
         }
@@ -199,7 +198,11 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
                 return true;
             }
             case "hub", "lobby" -> { connectToLobby(sender); return true; }
-            case "sell", "shop", "rtp", "tpa", "tpaccept", "tpdeny" -> { playerFeaturesManager.onCommand(sender, command, label, args); return true; }
+            case "sell", "shop", "rtp", "tpa", "tpaccept", "tpdeny" -> {
+                if (sender instanceof Player p && label.equalsIgnoreCase("tpa") && args.length == 0) missingGuiManager.openTargets(p, "tpa");
+                else playerFeaturesManager.onCommand(sender, command, label, args);
+                return true;
+            }
         }
         if (!(sender instanceof Player player)) {
             sender.sendMessage("Dieser Befehl ist nur im Spiel verfügbar.");
@@ -220,7 +223,8 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
                     player.sendMessage(color("&cHomes sind auf der Lobby deaktiviert."));
                     return true;
                 }
-                String homeName = args.length == 0 ? "home" : normalizeHomeName(args[0]);
+                if (args.length == 0) { missingGuiManager.openHomes(player, false); return true; }
+                String homeName = normalizeHomeName(args[0]);
                 if (homeName == null) { player.sendMessage(color("&cName: 1-16 Zeichen, Buchstaben, Zahlen, _ oder -")); return true; }
                 String base = "named-homes." + player.getUniqueId();
                 ConfigurationSection currentHomes = getConfig().getConfigurationSection(base);
@@ -236,7 +240,8 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
                     player.sendMessage(color("&cHomes sind auf der Lobby deaktiviert."));
                     return true;
                 }
-                String homeName = args.length > 0 ? normalizeHomeName(args[0]) : "home";
+                if (args.length == 0) { missingGuiManager.openHomes(player, false); return true; }
+                String homeName = normalizeHomeName(args[0]);
                 if (homeName == null) { player.sendMessage(color("&cUngültiger Home-Name.")); return true; }
                 Location home = loadLocation("named-homes." + player.getUniqueId() + "." + homeName);
                 if (home == null && homeName.equals("home")) home = loadLocation("homes." + player.getUniqueId());
@@ -252,7 +257,15 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             case "clan" -> clanManager.handle(player, args);
             case "clanduel" -> clanDuelManager.handle(sender, args);
             case "mace" -> maceManager.onCommand(sender, command, label, args);
-            case "fly", "god", "invsee", "echest", "ecsee", "trash", "ranks", "rank", "voice" ->
+            case "fly", "god" -> {
+                if (args.length == 0) missingGuiManager.openTargets(player, label);
+                else utilityManager.onCommand(sender, command, label, args);
+            }
+            case "invsee", "ecsee" -> {
+                if (args.length == 0) missingGuiManager.openTargets(player, label);
+                else utilityManager.onCommand(sender, command, label, args);
+            }
+            case "echest", "trash", "ranks", "rank", "voice" ->
                     utilityManager.onCommand(sender, command, label, args);
             case "ah", "order", "orders" -> marketManager.onCommand(sender, command, label, args);
             case "kit" -> kitManager.handle(player, args);
