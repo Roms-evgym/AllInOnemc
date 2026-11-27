@@ -86,13 +86,13 @@ final class SubcommandDialogManager implements Listener {
     }
     private void auction(Player p) {
         menu(p,"Auktionshaus – Untermenüs","Wähle einen Unterbefehl.",
-            run(p,"Auktionen ansehen","Öffnet das Auktionshaus.","ah","ah"),
+            run(p,"Auktionen ansehen","Öffnet das Auktionshaus.","ah"),
             ask(p,"Gegenstand verkaufen","Verkauft den Gegenstand in deiner Haupthand.","ah sell","Preis:"),
             ask(p,"Eigene Auktion abbrechen","/ah cancel <ID>","ah cancel","Auktions-ID:"));
     }
     private void orders(Player p) {
         menu(p,"Aufträge – Untermenüs","Wähle einen Unterbefehl.",
-            run(p,"Aufträge ansehen","Öffnet die Auftragsübersicht.","orders","orders"),
+            run(p,"Aufträge ansehen","Öffnet die Auftragsübersicht.","orders"),
             ask(p,"Auftrag erstellen","/order create <Material> <Menge> <Belohnung>","order create","Material, Menge und Belohnung (z. B. DIAMOND 16 500):"),
             ask(p,"Auftrag erfüllen","/order fill <ID>","order fill","Auftrags-ID:"),
             ask(p,"Auftrag abbrechen","/order cancel <ID>","order cancel","Auftrags-ID:"));
@@ -135,7 +135,7 @@ final class SubcommandDialogManager implements Listener {
     private void vanish(Player p) {
         menu(p,"Vanish – Untermenüs","Wähle eine Aktion.",
             run(p,"Vanish umschalten","/vanish","vanish"),
-            run(p,"Sichtbarkeit verwalten","Öffnet die Rang-Auswahl.","vanish gui","vanish gui"));
+            run(p,"Sichtbarkeit verwalten","Öffnet die Rang-Auswahl.","vanish gui"));
     }
     private void presets(Player p) {
         menu(p,"Ban-Presets – Untermenüs","Wähle eine Aktion.",
@@ -160,7 +160,7 @@ final class SubcommandDialogManager implements Listener {
     }
     private void simulation(Player p,String root) {
         menu(p,root.equals("lag")?"Lag-Simulation":"Crash-Simulation","Wähle einen Unterbefehl.",
-            run(p,"Simulation starten","Startet die sichere Simulation gemäß den Einstellungen.",""+root,root),
+            run(p,"Simulation starten","Öffnet die Spielerauswahl.",root),
             ask(p,"Simulation für Spieler stoppen","/ "+root+" stop <Spieler>",""+root+" stop","Spielername:"));
     }
     private void clanDuel(Player p) {
