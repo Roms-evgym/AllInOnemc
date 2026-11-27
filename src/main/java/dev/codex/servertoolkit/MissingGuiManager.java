@@ -69,13 +69,13 @@ final class MissingGuiManager implements Listener {
             add(menu, 46, Material.ENDER_CHEST, "§5Spieler-Enderchest ansehen", "ecsee");
         }
         if (p.hasPermission("servertoolkit.ban")) {
-            add(menu, 48, Material.IRON_AXE, "§cSpieler bannen", "ban");
-            add(menu, 50, Material.PAPER, "§cSpieler bestrafen", "punish");
+            add(menu, 50, Material.IRON_AXE, "§cSpieler bannen", "ban");
+            add(menu, 51, Material.PAPER, "§cSpieler bestrafen", "punish");
         }
         if (p.hasPermission("servertoolkit.vanish")) add(menu, 44, Material.POTION, "§8Vanish", "vanish");
-        if (p.hasPermission("servertoolkit.eco.admin")) add(menu, 46, Material.EMERALD, "§2Admin-Geldverwaltung", "eco");
-        if (p.hasPermission("servertoolkit.admin")) add(menu, 47, Material.BEACON, "§cSpawn setzen", "setspawn");
-        add(menu, 49, Material.BARRIER, "§7Schließen", "close");
+        if (p.hasPermission("servertoolkit.eco.admin")) add(menu, 47, Material.EMERALD, "§2Admin-Geldverwaltung", "eco");
+        if (p.hasPermission("servertoolkit.admin")) add(menu, 48, Material.BEACON, "§cSpawn setzen", "setspawn");
+        add(menu, 53, Material.BARRIER, "§7Schließen", "close");
         p.openInventory(menu.inventory);
     }
 
