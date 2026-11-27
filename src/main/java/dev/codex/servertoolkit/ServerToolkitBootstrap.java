@@ -45,7 +45,8 @@ public final class ServerToolkitBootstrap implements PluginBootstrap {
                                 button("Homes", "Deine Homes anzeigen", "menu_homes"),
                                 button("Voice-Chat", "Voice-Chat-Hilfe öffnen", "menu_voice"),
                                 button("Kopfgeld", "Kopfgeld-Menü öffnen", "menu_bounty"),
-                                button("Spielzeit", "Spielzeit anzeigen", "menu_playtime")
+                                button("Spielzeit", "Spielzeit anzeigen", "menu_playtime"),
+                                button("Weitere Funktionen", "Öffnet das vollständige AllInOne-Menü", "menu_all")
                         ), null, 2)))
         );
 
