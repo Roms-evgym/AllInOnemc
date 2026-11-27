@@ -52,6 +52,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     private MissingGuiManager missingGuiManager;
     private SubcommandDialogManager subcommandDialogManager;
     private AuthManager authManager;
+    private ReplayManager replayManager;
     private final Map<java.util.UUID, Long> rtpCooldowns = new HashMap<>();
 
     @Override
@@ -82,12 +83,13 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         marketManager = new MarketManager(this);
         kitManager = new KitManager(this);
         moderationManager = new ModerationManager(this);
+        replayManager = new ReplayManager(this);
         sitManager = new SitManager(this);
         lobbyManager = new LobbyManager(this);
         WorldSpawnManager worldSpawnManager = new WorldSpawnManager();
         for (String name : new String[]{"spawn", "setspawn", "sethome", "home", "homes", "delhome", "rtp", "clan", "clanduel", "mace",
                 "fly", "god", "invsee", "echest", "ecsee", "trash", "ranks", "rank", "voice", "ah", "order", "orders", "kit",
-                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode", "menu", "bounty", "playtime", "sit", "lag", "crash", "nick", "unnick", "prank", "register", "login", "logout"}) {
+                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode", "menu", "bounty", "playtime", "sit", "lag", "crash", "nick", "unnick", "prank", "register", "login", "logout", "report", "atlas"}) {
             registerCommandBridge(name, List.of(), (sender, args) -> {
                 if (name.equals("fakebase") || name.equals("fakore")) worldSpawnManager.onCommand(sender, null, name, args);
                 else onCommand(sender, null, name, args);
@@ -139,6 +141,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     public void onDisable() {
         if (authManager != null) authManager.shutdown();
         if (maceManager != null) maceManager.shutdown();
+        if (replayManager != null) replayManager.shutdown();
         getServer().getMessenger().unregisterIncomingPluginChannel(this, NetworkSyncManager.CHANNEL);
         getServer().getMessenger().unregisterOutgoingPluginChannel(this, NetworkSyncManager.CHANNEL);
     }
@@ -160,6 +163,12 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             case "setcode" -> {
                 if (sender instanceof Player p && args.length == 0) missingGuiManager.openSetCode(p);
                 else redeemCodeManager.handleCreate(sender, args);
+                return true;
+            }
+            case "report" -> { replayManager.handleReport(sender, args); return true; }
+            case "atlas" -> {
+                if (sender instanceof Player p) replayManager.handleAtlas(p, args);
+                else sender.sendMessage("Dieser Befehl ist nur im Spiel verfügbar.");
                 return true;
             }
             case "playtime" -> {
@@ -304,6 +313,8 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     private String commandPermission(String name) {
         return switch (name) {
             case "menu" -> "servertoolkit.menu.open";
+            case "atlas" -> "atlas.view";
+            case "report" -> "atlas.report";
             case "register", "login", "logout" -> "servertoolkit.auth.use";
             case "setspawn", "fakebase", "fakore" -> "servertoolkit.admin";
             case "clanduel" -> "servertoolkit.clanduel";
