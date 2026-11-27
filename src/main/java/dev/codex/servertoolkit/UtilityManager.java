@@ -58,9 +58,9 @@ public final class UtilityManager implements CommandExecutor, Listener {
         this.menuAction = new NamespacedKey(plugin, "servertoolkit_menu_action");
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            if (!plugin.getConfig().getBoolean("scoreboard.enabled", false)) return;
+            // Nameplates must stay active even when the optional sidebar is disabled.
             for (Player player : Bukkit.getOnlinePlayers()) updateScoreboard(player);
-        }, 100L, 100L);
+        }, 20L, 100L);
     }
 
     private void ensureRankDefaults() {
