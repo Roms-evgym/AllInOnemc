@@ -30,6 +30,14 @@ commands:
   playtime:
     description: Zeigt die serverübergreifende Spielzeit.
     usage: /playtime [Spieler]
+  report:
+    description: Sichert die letzten zehn Minuten eines Spielers als Cheat-Report.
+    usage: /report <Spieler> [Grund]
+    permission: atlas.report
+  atlas:
+    description: Listet und spielt gespeicherte Spieler-Replays ab.
+    usage: /atlas [ID|stop|help]
+    permission: atlas.view
   spawn:
     description: Teleportiert zum Server-Spawn.
     usage: /spawn
@@ -181,6 +189,12 @@ commands:
     usage: /fakore <erz> [anzahl]
     permission: servertoolkit.admin
 permissions:
+  atlas.view:
+    description: Darf gespeicherte Atlas-Replays ansehen.
+    default: op
+  atlas.report:
+    description: Darf Spieler melden und Replays sichern.
+    default: true
   servertoolkit.auth.use:
     description: Darf sich bei AllInOne Auth anmelden und registrieren.
     default: true
