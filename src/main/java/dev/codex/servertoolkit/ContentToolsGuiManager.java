@@ -1,164 +1,90 @@
 package dev.codex.servertoolkit;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.SkullMeta;
-import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-final class ContentToolsGuiManager implements Listener {
+final class ContentToolsGuiManager {
     private final ServerToolkit plugin;
-    private final NamespacedKey actionKey;
 
-    ContentToolsGuiManager(ServerToolkit plugin) {
-        this.plugin = plugin;
-        this.actionKey = new NamespacedKey(plugin, "content_gui_action");
-        Bukkit.getPluginManager().registerEvents(this, plugin);
+    ContentToolsGuiManager(ServerToolkit plugin) { this.plugin = plugin; }
+
+    private void show(Player player, String title, String description, List<PopupMenuManager.MenuOption> options) {
+        plugin.popupMenuManager().showMenu(player,title,description,options);
+    }
+
+    private void add(List<PopupMenuManager.MenuOption> options,String label,String description,Runnable action) {
+        options.add(new PopupMenuManager.MenuOption(label,description,action));
     }
 
     void openNick(Player player) {
-        MenuHolder holder = new MenuHolder();
-        Inventory inv = Bukkit.createInventory(holder, 27, "§8Nick & Skin");
-        holder.inventory = inv;
-        add(inv, 11, Material.NAME_TAG, "§aZufälligen Nick aktivieren", "nick-random");
-        add(inv, 13, Material.PLAYER_HEAD, "§eEigenen Nick entfernen", "nick-restore");
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        add(options,"Zufälligen Nick aktivieren","Nickname und Skin zufällig setzen",() -> {
+            if (player.hasPermission("servertoolkit.nick")) player.performCommand("nick random");
+            else player.sendMessage("§cKeine Berechtigung.");
+        });
+        add(options,"Eigenen Nick entfernen","Originalnamen und Skin wiederherstellen",() -> plugin.contentToolsManager().restoreNick(player));
         if (player.hasPermission("servertoolkit.nick.others")) {
-            add(inv, 15, Material.WRITABLE_BOOK, "§bSpieler nicken", "nick-targets");
-            add(inv, 17, Material.BARRIER, "§cNick eines Spielers entfernen", "unnick-targets");
+            add(options,"Spieler nicken","Zielspieler auswählen",() -> openTargets(player,"nick"));
+            add(options,"Nick eines Spielers entfernen","Zielspieler auswählen",() -> openTargets(player,"unnick"));
         }
-        player.openInventory(inv);
+        add(options,"Hauptmenü","Zurück",() -> plugin.missingGuiManager().openMain(player));
+        show(player,"Nick & Skin","Wähle eine Aktion.",options);
     }
 
     void openPrank(Player player) {
-        MenuHolder holder = new MenuHolder();
-        Inventory inv = Bukkit.createInventory(holder, 27, "§8Prank-Einstellungen");
-        holder.inventory = inv;
         boolean enabled = plugin.contentToolsManager().prankEnabled(player);
-        add(inv, 11, enabled ? Material.LIME_DYE : Material.GRAY_DYE,
-                enabled ? "§aPranks: AKTIV" : "§cPranks: DEAKTIVIERT", "prank-toggle");
-        add(inv, 15, Material.BARRIER, "§7Schließen", "close");
-        player.openInventory(inv);
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
+        add(options,enabled ? "Pranks deaktivieren" : "Pranks aktivieren",
+                enabled ? "Lag-/Crash-Simulationen für dich sperren" : "Simulationen für dich erlauben",
+                () -> {
+                    if (player.hasPermission("servertoolkit.prank.toggle"))
+                        plugin.contentToolsManager().togglePrank(player);
+                    else player.sendMessage("§cKeine Berechtigung.");
+                    openPrank(player);
+                });
+        add(options,"Hauptmenü","Zurück",() -> plugin.missingGuiManager().openMain(player));
+        show(player,"Prank-Einstellungen","Aktueller Status: " + (enabled ? "AKTIV" : "DEAKTIVIERT"),options);
     }
 
     void openTargets(Player actor, String type) {
-        MenuHolder holder = new MenuHolder();
-        Inventory inv = Bukkit.createInventory(holder, 54, type.equals("nick") ? "§8Nick: Spieler auswählen"
-                : type.equals("unnick") ? "§8Unnick: Spieler auswählen"
-                : type.equals("lag") ? "§8Lag-Simulation: Ziel" : "§8Crash-Simulation: Ziel");
-        holder.inventory = inv;
-        int slot = 0;
+        String title = switch (type) {
+            case "nick" -> "Nick – Spieler auswählen";
+            case "unnick" -> "Unnick – Spieler auswählen";
+            case "lag" -> "Lag-Simulation – Ziel auswählen";
+            default -> "Crash-Simulation – Ziel auswählen";
+        };
+        List<PopupMenuManager.MenuOption> options = new ArrayList<>();
         for (Player target : Bukkit.getOnlinePlayers()) {
-            if (target.equals(actor) || slot >= 45) continue;
-            ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-            SkullMeta meta = (SkullMeta) head.getItemMeta();
-            if (meta != null) {
-                meta.setOwningPlayer(target);
-                meta.setDisplayName("§f" + target.getName());
-                List<String> lore = new ArrayList<>();
-                lore.add(type.equals("nick") ? "§7Für Content nicken" : "§7Prank-Status: "
-                        + (plugin.contentToolsManager().prankEnabled(target) ? "§aAktiviert" : "§cDeaktiviert"));
-                meta.setLore(lore);
-                meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING,
-                        type + ":" + target.getUniqueId());
-                head.setItemMeta(meta);
-            }
-            inv.setItem(slot++, head);
-            if (slot < 45 && type.equals("lag") && plugin.contentToolsManager().hasLag(target.getUniqueId())) {
-                add(inv, slot++, Material.REDSTONE_BLOCK, "§cLag bei " + target.getName() + " stoppen", "stop-lag:" + target.getUniqueId());
-            } else if (slot < 45 && type.equals("crash") && plugin.contentToolsManager().hasCrash(target.getUniqueId())) {
-                add(inv, slot++, Material.BARRIER, "§cCrash bei " + target.getName() + " stoppen", "stop-crash:" + target.getUniqueId());
-            }
+            if (target.equals(actor)) continue;
+            String detail = type.equals("nick") ? "Zufälligen Nick und Skin setzen"
+                    : type.equals("unnick") ? "Nick und Skin zurücksetzen"
+                    : "Prank-Status: " + (plugin.contentToolsManager().prankEnabled(target) ? "Aktiviert" : "Deaktiviert");
+            add(options,target.getName(),detail,() -> select(actor,target.getUniqueId(),type));
         }
-        add(inv, 49, Material.ARROW, "§7Zurück", "back-" + type);
-        actor.openInventory(inv);
+        add(options,"Zurück","Vorheriges Menü",() -> {
+            if (type.equals("nick") || type.equals("unnick")) openNick(actor);
+            else plugin.missingGuiManager().openMain(actor);
+        });
+        show(actor,title,"Wähle einen Online-Spieler aus.",options);
     }
 
-    private void add(Inventory inv, int slot, Material material, String name, String action) {
-        ItemStack item = new ItemStack(material);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName(name);
-            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
-            item.setItemMeta(meta);
-        }
-        inv.setItem(slot, item);
-    }
-
-    @EventHandler
-    public void onClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player actor)
-                || !(event.getView().getTopInventory().getHolder() instanceof MenuHolder)) return;
-        event.setCancelled(true);
-        if (event.getClickedInventory() != event.getView().getTopInventory()) return;
-        ItemStack item = event.getCurrentItem();
-        if (item == null || !item.hasItemMeta()) return;
-        String action = item.getItemMeta().getPersistentDataContainer().get(actionKey, PersistentDataType.STRING);
-        if (action == null) return;
+    private void select(Player actor, UUID targetId, String type) {
+        Player target = Bukkit.getPlayer(targetId);
+        if (target == null) { actor.sendMessage("§cSpieler ist nicht mehr online."); return; }
         ContentToolsManager tools = plugin.contentToolsManager();
-        switch (action) {
-            case "nick-random" -> {
-                if (actor.hasPermission("servertoolkit.nick")) actor.performCommand("nick random");
-                actor.closeInventory();
+        switch (type) {
+            case "nick" -> {
+                if (actor.hasPermission("servertoolkit.nick.others")) tools.applyNickFromGui(target,actor);
+                else actor.sendMessage("§cKeine Berechtigung.");
             }
-            case "nick-restore" -> {
-                tools.restoreNick(actor);
-                actor.closeInventory();
-            }
-            case "nick-targets" -> openTargets(actor, "nick");
-            case "unnick-targets" -> openTargets(actor, "unnick");
-            case "prank-toggle" -> {
-                if (actor.hasPermission("servertoolkit.prank.toggle")) tools.togglePrank(actor);
-                actor.closeInventory();
-                openPrank(actor);
-            }
-            case "close" -> actor.closeInventory();
-            default -> {
-                if (action.startsWith("back-")) {
-                    actor.closeInventory();
-                    if (action.equals("back-nick")) openNick(actor);
-                    else actor.sendMessage("§7Menü geschlossen.");
-                    return;
-                }
-                int colon = action.indexOf(':');
-                if (colon < 1) return;
-                String type = action.substring(0, colon);
-                UUID targetId;
-                try { targetId = UUID.fromString(action.substring(colon + 1)); }
-                catch (IllegalArgumentException ex) { return; }
-                Player target = Bukkit.getPlayer(targetId);
-                if (target == null) { actor.sendMessage("§cSpieler ist nicht mehr online."); actor.closeInventory(); return; }
-                if (type.equals("nick")) {
-                    if (actor.hasPermission("servertoolkit.nick.others")) tools.applyNickFromGui(target, actor);
-                } else if (type.equals("unnick")) {
-                    if (actor.hasPermission("servertoolkit.nick.others")) tools.restoreNickFromGui(target, actor);
-                } else if (type.equals("lag")) {
-                    tools.guiStartLag(target, actor);
-                } else if (type.equals("crash")) {
-                    tools.guiStartCrash(target, actor);
-                } else if (type.equals("stop-lag")) {
-                    tools.guiStopLag(target, actor);
-                } else if (type.equals("stop-crash")) {
-                    tools.guiStopCrash(target, actor);
-                }
-                actor.closeInventory();
-            }
+            case "unnick" -> tools.restoreNickFromGui(target,actor);
+            case "lag" -> tools.guiStartLag(target,actor);
+            case "crash" -> tools.guiStartCrash(target,actor);
+            default -> { }
         }
-    }
-
-    private static final class MenuHolder implements InventoryHolder {
-        private Inventory inventory;
-        @Override public Inventory getInventory() { return inventory; }
     }
 }
