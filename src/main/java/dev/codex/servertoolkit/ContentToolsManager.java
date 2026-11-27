@@ -155,6 +155,7 @@ final class ContentToolsManager implements Listener {
         enabled = args[0].equalsIgnoreCase("on");
         plugin.getConfig().set("prank-enabled." + player.getUniqueId(), enabled);
         plugin.saveConfig();
+        if (plugin.networkSyncManager() != null) plugin.networkSyncManager().publishPrank(player, enabled);
         player.sendMessage(enabled ? "§aPranks aktiviert. Admins dürfen jetzt Lag- und Crash-Simulationen starten." : "§cPranks deaktiviert. Lag- und Crash-Simulationen sind für dich gesperrt.");
         if (!enabled) {
             stopLag(player, "§cDeine laufende Lag-Simulation wurde wegen /prank off beendet.");
@@ -269,10 +270,19 @@ final class ContentToolsManager implements Listener {
 
     boolean prankEnabled(Player player) { return isPrankEnabled(player); }
 
+    void applySyncedPrank(Player player, boolean enabled) {
+        plugin.getConfig().set("prank-enabled." + player.getUniqueId(), enabled);
+        plugin.saveConfig();
+    }
+
+    boolean hasLag(UUID playerId) { return lagSessions.containsKey(playerId); }
+    boolean hasCrash(UUID playerId) { return crashTasks.containsKey(playerId); }
+
     void togglePrank(Player player) {
         boolean enabled = !isPrankEnabled(player);
         plugin.getConfig().set("prank-enabled." + player.getUniqueId(), enabled);
         plugin.saveConfig();
+        if (plugin.networkSyncManager() != null) plugin.networkSyncManager().publishPrank(player, enabled);
         player.sendMessage(enabled ? "§aPranks aktiviert." : "§cPranks deaktiviert.");
         if (!enabled) {
             stopLag(player, "§cDeine laufende Lag-Simulation wurde beendet.");
