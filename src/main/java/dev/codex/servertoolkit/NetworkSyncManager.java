@@ -52,6 +52,14 @@ public final class NetworkSyncManager implements Listener, PluginMessageListener
             out.writeUTF(skinName);
         });
     }
+    public void publishPrank(Player player, boolean enabled) {
+        if (player == null || !player.isOnline()) return;
+        send(player, out -> {
+            out.writeUTF("PRANK_SET");
+            out.writeUTF(player.getUniqueId().toString());
+            out.writeBoolean(enabled);
+        });
+    }
     public void clearNick(Player player) {
         if (player == null || !player.isOnline()) return;
         send(player, out -> {
@@ -84,6 +92,13 @@ public final class NetworkSyncManager implements Listener, PluginMessageListener
             if ("REQUEST_ALL".equals(operation)) {
                 if (in.available() != 0) return;
                 for (Player online : Bukkit.getOnlinePlayers()) publish(online);
+                return;
+            }
+            if ("PRANK_SYNC".equals(operation)) {
+                UUID targetId = UUID.fromString(in.readUTF());
+                boolean enabled = in.readBoolean();
+                if (in.available() != 0 || !targetId.equals(carrier.getUniqueId())) return;
+                plugin.contentToolsManager().applySyncedPrank(carrier, enabled);
                 return;
             }
             if ("NICK_SYNC".equals(operation)) {
