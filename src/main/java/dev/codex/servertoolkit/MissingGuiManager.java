@@ -312,7 +312,7 @@ final class MissingGuiManager implements Listener {
             case "eco-give", "eco-take", "eco-set" -> openTargets(p, action);
             case "pay-targets" -> openTargets(p, "pay");
             case "fly", "god", "invsee", "ecsee", "ban", "punish" -> openTargets(p, action);
-            case "sethome" -> { p.performCommand("sethome"); p.closeInventory(); }
+            case "sethome" -> { p.performCommand("sethome home"); p.closeInventory(); }
             case "sethome-named" -> prompt(p, "sethome:named", "Gib einen Home-Namen ein:");
             default -> {
                 if (action.startsWith("target:")) {
