@@ -61,8 +61,16 @@ final class MissingGuiManager implements Listener {
         add(menu, 40, Material.NAME_TAG, "§eNick & Skin", "nick");
         add(menu, 41, Material.FIREWORK_ROCKET, "§cPrank-Einstellungen", "prank");
         if (p.hasPermission("servertoolkit.ban.manage")) {
-            add(menu, 42, Material.ANVIL, "§cBan-Rechte & Presets", "banrank");
-            add(menu, 43, Material.BOOK, "§cBan-Presets", "banpreset");
+            add(menu, 42, Material.ANVIL, "§cBan-Rechte", "banrank");
+            add(menu, 43, Material.BOOK, "§cBan-Presets & Banhammer", "banpreset");
+        }
+        if (p.hasPermission("servertoolkit.staff")) {
+            add(menu, 45, Material.CHEST, "§cSpieler-Inventar ansehen", "invsee");
+            add(menu, 46, Material.ENDER_CHEST, "§5Spieler-Enderchest ansehen", "ecsee");
+        }
+        if (p.hasPermission("servertoolkit.ban")) {
+            add(menu, 48, Material.IRON_AXE, "§cSpieler bannen", "ban");
+            add(menu, 50, Material.PAPER, "§cSpieler bestrafen", "punish");
         }
         if (p.hasPermission("servertoolkit.vanish")) add(menu, 44, Material.POTION, "§8Vanish", "vanish");
         if (p.hasPermission("servertoolkit.eco.admin")) add(menu, 46, Material.EMERALD, "§2Admin-Geldverwaltung", "eco");
@@ -213,6 +221,18 @@ final class MissingGuiManager implements Listener {
                 player.performCommand("setcode " + parts[2] + " " + parts[1] + " " + value);
                 return;
             }
+            if (action.startsWith("ban-reason:")) {
+                String reason = input.replaceAll("[^A-Za-z0-9 _.,!?-]", "");
+                if (reason.isBlank() || reason.length() > 100) { player.sendMessage("§cUngültiger Grund."); return; }
+                player.performCommand("ban " + action.substring("ban-reason:".length()) + " " + reason);
+                return;
+            }
+            if (action.startsWith("punish-preset:")) {
+                String preset = safeToken(input);
+                if (preset == null) { player.sendMessage("§cUngültige Preset-ID."); return; }
+                player.performCommand("punish " + action.substring("punish-preset:".length()) + " " + preset);
+                return;
+            }
             if (action.startsWith("amount:")) {
                 String[] parts = action.split(":", 3);
                 if (parts.length != 3 || !input.matches("[0-9]+([.,][0-9]{1,2})?")) {
@@ -257,10 +277,11 @@ final class MissingGuiManager implements Listener {
             case "homes-delete" -> openHomes(p, true);
             case "tpa" -> openTargets(p, "tpa");
             case "tpaccept", "tpdeny", "sit", "hub", "setspawn", "shop", "sell", "clan", "kit", "ranks",
-                    "ah", "orders", "mace", "servers", "voice", "nick", "prank", "banrank", "banpreset", "vanish" -> {
+                    "ah", "orders", "mace", "servers", "voice", "nick", "prank", "banrank", "vanish" -> {
                 p.performCommand(action);
                 p.closeInventory();
             }
+            case "banpreset" -> { p.performCommand("banpreset gui"); p.closeInventory(); }
             case "code" -> openCode(p);
             case "setcode" -> openSetCode(p);
             case "setcode-rank" -> prompt(p, "setcode-code:rank", "Gib den neuen Code ein:");
@@ -268,7 +289,7 @@ final class MissingGuiManager implements Listener {
             case "eco" -> openEco(p);
             case "eco-give", "eco-take", "eco-set" -> openTargets(p, action);
             case "pay-targets" -> openTargets(p, "pay");
-            case "fly", "god" -> openTargets(p, action);
+            case "fly", "god", "invsee", "ecsee", "ban", "punish" -> openTargets(p, action);
             case "sethome" -> { p.performCommand("sethome"); p.closeInventory(); }
             case "sethome-named" -> prompt(p, "sethome:named", "Gib einen Home-Namen ein:");
             default -> {
@@ -282,7 +303,9 @@ final class MissingGuiManager implements Listener {
                                 prompt(p, "amount:" + parts[1] + ":" + target.getName(), "Gib den Betrag für " + target.getName() + " ein:");
                         case "tpa" -> { p.performCommand("tpa " + target.getName()); p.closeInventory(); }
                         case "playtime" -> { p.performCommand("playtime " + target.getName()); p.closeInventory(); }
-                        case "fly", "god" -> { p.performCommand(parts[1] + " " + target.getName()); p.closeInventory(); }
+                        case "fly", "god", "invsee", "ecsee" -> { p.performCommand(parts[1] + " " + target.getName()); p.closeInventory(); }
+                        case "ban" -> prompt(p, "ban-reason:" + target.getName(), "Gib den Ban-Grund für " + target.getName() + " ein:");
+                        case "punish" -> prompt(p, "punish-preset:" + target.getName(), "Gib die Preset-ID für " + target.getName() + " ein:");
                         default -> { }
                     }
                 } else if (action.startsWith("home:")) {
