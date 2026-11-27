@@ -226,8 +226,11 @@ final class MissingGuiManager implements Listener {
             }
             if (action.startsWith("setcode-value:")) {
                 String[] parts = action.split(":", 3);
-                String value = safeToken(input);
-                if (parts.length != 3 || value == null) { player.sendMessage("§cUngültige Eingabe."); return; }
+                if (parts.length != 3) { player.sendMessage("§cUngültige Eingabe."); return; }
+                String value = parts[1].equals("money")
+                        ? (input.matches("[0-9]+([.,][0-9]{1,2})?") ? input.replace(',', '.') : null)
+                        : safeToken(input);
+                if (value == null) { player.sendMessage("§cUngültige Eingabe."); return; }
                 player.performCommand("setcode " + parts[2] + " " + parts[1] + " " + value);
                 return;
             }
