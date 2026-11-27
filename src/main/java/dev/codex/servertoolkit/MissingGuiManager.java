@@ -48,11 +48,30 @@ final class MissingGuiManager implements Listener {
         add(menu, 22, Material.TOTEM_OF_UNDYING, "§dGod-Modus", "god");
         add(menu, 23, Material.PLAYER_HEAD, "§eHinsetzen / Aufstehen", "sit");
         add(menu, 24, Material.COMPASS, "§aZur Lobby", "hub");
-        if (p.hasPermission("servertoolkit.eco.admin")) add(menu, 29, Material.EMERALD, "§2Admin-Geldverwaltung", "eco");
-        if (p.hasPermission("servertoolkit.admin")) add(menu, 31, Material.BEACON, "§cSpawn setzen", "setspawn");
+        add(menu, 28, Material.CHEST, "§6Shop", "shop");
+        add(menu, 29, Material.HOPPER, "§eVerkaufen", "sell");
+        add(menu, 30, Material.SHIELD, "§bClans", "clan");
+        add(menu, 31, Material.CHEST_MINECART, "§aKits", "kit");
+        add(menu, 32, Material.NAME_TAG, "§dRänge", "ranks");
+        add(menu, 33, Material.DIAMOND, "§6Auktionshaus", "ah");
+        add(menu, 34, Material.WRITABLE_BOOK, "§eAufträge", "orders");
+        add(menu, 37, Material.MACE, "§cMace", "mace");
+        add(menu, 38, Material.ENDER_EYE, "§bServer wechseln", "servers");
+        add(menu, 39, Material.NOTE_BLOCK, "§dVoice-Chat", "voice");
+        add(menu, 40, Material.NAME_TAG, "§eNick & Skin", "nick");
+        add(menu, 41, Material.FIREWORK_ROCKET, "§cPrank-Einstellungen", "prank");
+        if (p.hasPermission("servertoolkit.ban.manage")) {
+            add(menu, 42, Material.ANVIL, "§cBan-Rechte & Presets", "banrank");
+            add(menu, 43, Material.BOOK, "§cBan-Presets", "banpreset");
+        }
+        if (p.hasPermission("servertoolkit.vanish")) add(menu, 44, Material.POTION, "§8Vanish", "vanish");
+        if (p.hasPermission("servertoolkit.eco.admin")) add(menu, 46, Material.EMERALD, "§2Admin-Geldverwaltung", "eco");
+        if (p.hasPermission("servertoolkit.admin")) add(menu, 47, Material.BEACON, "§cSpawn setzen", "setspawn");
         add(menu, 49, Material.BARRIER, "§7Schließen", "close");
         p.openInventory(menu.inventory);
     }
+
+    void openCode(Player p) { prompt(p, "code", "Gib deinen Einlösecode ein:"); }
 
     void openMoney(Player p) {
         Menu menu = menu("§8Geld & Überweisen", 27);
@@ -237,8 +256,12 @@ final class MissingGuiManager implements Listener {
             case "homes" -> openHomes(p, false);
             case "homes-delete" -> openHomes(p, true);
             case "tpa" -> openTargets(p, "tpa");
-            case "tpaccept", "tpdeny", "sit", "hub", "setspawn" -> { p.performCommand(action); p.closeInventory(); }
-            case "code" -> prompt(p, "code", "Gib deinen Einlösecode ein:");
+            case "tpaccept", "tpdeny", "sit", "hub", "setspawn", "shop", "sell", "clan", "kit", "ranks",
+                    "ah", "orders", "mace", "servers", "voice", "nick", "prank", "banrank", "banpreset", "vanish" -> {
+                p.performCommand(action);
+                p.closeInventory();
+            }
+            case "code" -> openCode(p);
             case "setcode" -> openSetCode(p);
             case "setcode-rank" -> prompt(p, "setcode-code:rank", "Gib den neuen Code ein:");
             case "setcode-money" -> prompt(p, "setcode-code:money", "Gib den neuen Code ein:");
