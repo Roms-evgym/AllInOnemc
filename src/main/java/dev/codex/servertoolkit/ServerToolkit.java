@@ -123,6 +123,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             case "menu_voice" -> { command = "voice"; permission = "servertoolkit.menu.voice"; }
             case "menu_bounty" -> { command = "bounty"; permission = "servertoolkit.menu.bounty"; }
             case "menu_playtime" -> { command = "playtime"; permission = "servertoolkit.menu.playtime"; }
+            case "menu_all" -> { command = "menu"; permission = "servertoolkit.menu.open"; }
             default -> { return; }
         }
         if (!player.hasPermission(permission)) {
