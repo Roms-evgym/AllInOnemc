@@ -620,21 +620,27 @@ public final class UtilityManager implements CommandExecutor, Listener {
         ScoreboardManager manager = Bukkit.getScoreboardManager(); if (manager == null) return;
         Scoreboard board = manager.getNewScoreboard();
 
-        // Team prefix/suffix render rank and clan above the player's head, independently
-        // from the sidebar and independently from the player's real permissions.
-        boolean nicked = plugin.contentToolsManager() != null && plugin.contentToolsManager().nickName(player) != null;
-        String displayRank = nicked && plugin.contentToolsManager().nickRankId(player) != null
-                ? plugin.contentToolsManager().nickRankId(player) : getRankId(player);
-        String headPrefix = rankPrefix(displayRank) + " ";
-        String clan = plugin.clanManager() == null ? null : plugin.clanManager().clanName(player.getUniqueId());
-        String headSuffix = clan == null || clan.isBlank() ? "" : color(" &8[&e" + clan + "&8]");
-        if (headPrefix.length() > 64) headPrefix = headPrefix.substring(0, 64);
-        if (headSuffix.length() > 64) headSuffix = headSuffix.substring(0, 64);
-        String teamName = "aio" + player.getUniqueId().toString().replace("-", "").substring(0, 13);
-        var team = board.registerNewTeam(teamName);
-        team.setPrefix(headPrefix);
-        team.setSuffix(headSuffix);
-        team.addEntry(player.getName());
+        // Every viewer gets a scoreboard containing every online player's team.
+        // Previously only the viewer's own team was added, so other nameplates stayed blank.
+        for (Player target : Bukkit.getOnlinePlayers()) {
+            boolean targetNicked = plugin.contentToolsManager() != null
+                    && plugin.contentToolsManager().nickName(target) != null;
+            String displayRank = targetNicked && plugin.contentToolsManager().nickRankId(target) != null
+                    ? plugin.contentToolsManager().nickRankId(target) : getRankId(target);
+            String headPrefix = rankPrefix(displayRank) + " ";
+            String clan = plugin.clanManager() == null ? null
+                    : plugin.clanManager().clanName(target.getUniqueId());
+            String headSuffix = clan == null || clan.isBlank() ? "" : color(" &8[&e" + clan + "&8]");
+            if (headPrefix.length() > 64) headPrefix = headPrefix.substring(0, 64);
+            if (headSuffix.length() > 64) headSuffix = headSuffix.substring(0, 64);
+            String teamName = "aio" + target.getUniqueId().toString().replace("-", "").substring(0, 13);
+            var team = board.registerNewTeam(teamName);
+            team.setPrefix(headPrefix);
+            team.setSuffix(headSuffix);
+            team.addEntry(target.getName());
+        }
+        boolean nicked = plugin.contentToolsManager() != null
+                && plugin.contentToolsManager().nickName(player) != null;
 
         if (plugin.getConfig().getBoolean("scoreboard.enabled", false)) {
             Objective objective = board.registerNewObjective("stinfo", "dummy", color(plugin.getConfig().getString("scoreboard.title", "&6&lAllInOne Survival")));
