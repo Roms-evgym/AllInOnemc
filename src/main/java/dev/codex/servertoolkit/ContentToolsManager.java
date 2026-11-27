@@ -41,7 +41,8 @@ final class ContentToolsManager implements Listener {
 
     void handleLag(CommandSender sender, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage("§eNutzung: /lag <Spieler> [Sekunden] | /lag stop <Spieler>");
+            if (sender instanceof Player player) plugin.contentToolsGuiManager().openTargets(player, "lag");
+            else sender.sendMessage("§eNutzung: /lag <Spieler> [Sekunden] | /lag stop <Spieler>");
             return;
         }
         if (args[0].equalsIgnoreCase("stop")) {
@@ -70,7 +71,8 @@ final class ContentToolsManager implements Listener {
 
     void handleCrash(CommandSender sender, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage("§eNutzung: /crash <Spieler> | /crash stop <Spieler>");
+            if (sender instanceof Player player) plugin.contentToolsGuiManager().openTargets(player, "crash");
+            else sender.sendMessage("§eNutzung: /crash <Spieler> | /crash stop <Spieler>");
             return;
         }
         if (args[0].equalsIgnoreCase("stop")) {
@@ -137,8 +139,12 @@ final class ContentToolsManager implements Listener {
             sender.sendMessage("§cNur Spieler können ihren Prank-Status ändern.");
             return;
         }
+        if (args.length == 0) {
+            plugin.contentToolsGuiManager().openPrank(player);
+            return;
+        }
         if (args.length != 1 || !(args[0].equalsIgnoreCase("on") || args[0].equalsIgnoreCase("off") || args[0].equalsIgnoreCase("status"))) {
-            player.sendMessage("§eNutzung: /prank <on|off|status>");
+            player.sendMessage("§eNutzung: /prank [on|off|status]");
             return;
         }
         boolean enabled = isPrankEnabled(player);
@@ -170,6 +176,11 @@ final class ContentToolsManager implements Listener {
         if (!(sender instanceof Player player)) { sender.sendMessage("§cNur im Spiel verfügbar."); return; }
         if (args.length == 0) {
             if (!player.hasPermission("servertoolkit.nick")) { sender.sendMessage("§cKeine Berechtigung."); return; }
+            plugin.contentToolsGuiManager().openNick(player);
+            return;
+        }
+        if (args[0].equalsIgnoreCase("random")) {
+            if (!player.hasPermission("servertoolkit.nick")) { sender.sendMessage("§cKeine Berechtigung."); return; }
             applyNick(player, player);
             return;
         }
@@ -183,6 +194,8 @@ final class ContentToolsManager implements Listener {
         if (target == null) { sender.sendMessage("§cSpieler nicht online."); return; }
         applyNick(target, sender);
     }
+
+    void applyNickFromGui(Player target, CommandSender actor) { applyNick(target, actor); }
 
     private boolean isNickInUse(String candidate) {
         for (NickSession session : nickSessions.values()) {
