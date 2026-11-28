@@ -204,7 +204,7 @@ final class MissingGuiManager implements Listener {
             player.sendMessage("§cUngültige Eingabe."); return;
         }
         if (action.startsWith("stats-target")) {
-            if (!safeName(input)) { player.sendMessage("§cUngültiger Spielername."); return; }
+            if (safeName(input) == null) { player.sendMessage("§cUngültiger Spielername."); return; }
             player.performCommand("stats " + input); return;
         }
         if (action.startsWith("sethome:")) {
