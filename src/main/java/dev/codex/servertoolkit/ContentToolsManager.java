@@ -237,6 +237,7 @@ final class ContentToolsManager implements Listener {
             else disguised.setProperties(original.getProperties());
             nickSessions.put(player.getUniqueId(), new NickSession(original, selectedNick, selectedRank, skinName));
             player.setPlayerProfile(disguised);
+            refreshDisguisedProfileForViewers(player);
             if (plugin.networkSyncManager() != null) {
                 plugin.networkSyncManager().publishNick(player, selectedNick, selectedRank, skinName);
             }
@@ -248,6 +249,17 @@ final class ContentToolsManager implements Listener {
         }));
     }
 
+    private void refreshDisguisedProfileForViewers(Player target) {
+        // setPlayerProfile changes the server-side profile, but existing client entities
+        // can keep the old GameProfile until they are respawned. Hide/show forces a fresh
+        // player-info/entity spawn for every viewer (the target never hides itself).
+        for (Player viewer : Bukkit.getOnlinePlayers()) {
+            if (viewer.equals(target)) continue;
+            viewer.hidePlayer(plugin, target);
+            viewer.showPlayer(plugin, target);
+        }
+    }
+
     void restoreNick(Player player) {
         restoreNick(player, true);
     }
@@ -256,6 +268,7 @@ final class ContentToolsManager implements Listener {
         NickSession session = nickSessions.remove(player.getUniqueId());
         if (session == null) { player.sendMessage("§7Du bist nicht genickt."); return; }
         player.setPlayerProfile(session.originalProfile);
+        refreshDisguisedProfileForViewers(player);
         plugin.utilityManager().refreshPlayerDisplay(player);
         if (synchronize && plugin.networkSyncManager() != null) {
             plugin.networkSyncManager().clearNick(player);
