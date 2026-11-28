@@ -93,6 +93,7 @@ public final class PopupMenuManager {
                     Component.text(option.description()), 180,
                     DialogAction.customClick((view, audience) -> {
                         if (audience instanceof Player target && target.getUniqueId().equals(player.getUniqueId())) {
+                            target.closeDialog();
                             option.action().run();
                         }
                     }, ClickCallback.Options.builder().uses(1).build())));
@@ -114,6 +115,7 @@ public final class PopupMenuManager {
                 180, DialogAction.customClick((view, audience) -> {
                     if (!(audience instanceof Player target) || !target.getUniqueId().equals(player.getUniqueId())) return;
                     String value = view.getText("value");
+                    target.closeDialog();
                     if (value == null) {
                         target.sendMessage("§cBitte gib einen Wert ein.");
                         return;
