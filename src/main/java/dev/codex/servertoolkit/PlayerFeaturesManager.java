@@ -46,7 +46,6 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
         plugin.getConfig().addDefault("rtp.worlds.end", "world_the_end");
         plugin.getConfig().addDefault("rtp.min-radius", 500);
         plugin.getConfig().addDefault("rtp.max-radius", 5000);
-        plugin.getConfig().addDefault("rtp.cooldown-seconds", 60);
         plugin.getConfig().addDefault("shop.items.DIAMOND.price", 250.0);
         plugin.getConfig().addDefault("shop.items.IRON_INGOT.price", 12.0);
         plugin.getConfig().addDefault("shop.items.GOLD_INGOT.price", 20.0);
@@ -266,12 +265,6 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
     }
 
     private void randomTeleport(Player player, String dimension) {
-        long now = System.currentTimeMillis();
-        long readyAt = rtpCooldowns.getOrDefault(player.getUniqueId(), 0L);
-        if (readyAt > now) {
-            player.sendMessage(color("&cWarte noch " + ((readyAt - now + 999) / 1000) + " Sekunden bis zum nächsten RTP."));
-            return;
-        }
         String worldName = plugin.getConfig().getString("rtp.worlds." + dimension, "world");
         World world = Bukkit.getWorld(worldName);
         if (world == null) { player.sendMessage(color("&cDie Welt &f" + worldName + " &cist nicht geladen.")); return; }
@@ -285,7 +278,6 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
             if (candidate == null) continue;
             player.closeInventory();
             player.teleport(candidate);
-            rtpCooldowns.put(player.getUniqueId(), now + plugin.getConfig().getLong("rtp.cooldown-seconds", 60) * 1000L);
             player.sendMessage(color("&aDu wurdest sicher in &f" + dimension.toUpperCase(Locale.ROOT) + " &ateleportiert."));
             return;
         }
@@ -436,7 +428,6 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
     private String title(String text) { return color(text); }
     private String color(String text) { return ChatColor.translateAlternateColorCodes('&', text); }
 
-    private final Map<UUID, Long> rtpCooldowns = new HashMap<>();
     private static final class ShopHolder implements InventoryHolder { private Inventory inventory; @Override public Inventory getInventory() { return inventory; } }
     private static final class RtpHolder implements InventoryHolder { private Inventory inventory; @Override public Inventory getInventory() { return inventory; } }
     private static final class SellHolder implements InventoryHolder { private Inventory inventory; @Override public Inventory getInventory() { return inventory; } }
