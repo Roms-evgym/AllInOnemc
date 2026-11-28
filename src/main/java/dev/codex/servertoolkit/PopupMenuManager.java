@@ -5,6 +5,9 @@ import io.papermc.paper.registry.data.dialog.DialogBase;
 import io.papermc.paper.registry.data.dialog.ActionButton;
 import io.papermc.paper.registry.data.dialog.action.DialogAction;
 import io.papermc.paper.registry.data.dialog.type.DialogType;
+import io.papermc.paper.registry.data.dialog.input.DialogInput;
+import io.papermc.paper.registry.data.dialog.body.DialogBody;
+import java.util.function.Consumer;
 import net.kyori.adventure.text.event.ClickCallback;
 import net.kyori.adventure.text.Component;
 import org.bukkit.command.CommandSender;
@@ -98,6 +101,34 @@ public final class PopupMenuManager {
                 .base(DialogBase.builder(Component.text(title)).build())
                 .type(DialogType.multiAction(actions, null, 2)));
         player.showDialog(dialog);
+    }
+
+    public boolean showInputDialog(Player player, String title, String description, String label, int maxLength, Consumer<String> onSubmit) {
+        if (plugin.getServer().getPluginManager().isPluginEnabled("floodgate")) {
+            try {
+                FloodgateApi api = FloodgateApi.getInstance();
+                if (api != null && api.isFloodgatePlayer(player.getUniqueId())) return false;
+            } catch (RuntimeException ignored) {}
+        }
+        ActionButton confirm = ActionButton.create(Component.text("Bestätigen"), Component.text("Eingabe übernehmen"),
+                180, DialogAction.customClick((view, audience) -> {
+                    if (!(audience instanceof Player target) || !target.getUniqueId().equals(player.getUniqueId())) return;
+                    String value = view.getText("value");
+                    if (value == null) {
+                        target.sendMessage("§cBitte gib einen Wert ein.");
+                        return;
+                    }
+                    onSubmit.accept(value.trim());
+                }, ClickCallback.Options.builder().uses(1).build()));
+        ActionButton cancel = ActionButton.create(Component.text("Abbrechen"), Component.text("Dialog schließen"), 180, null);
+        Dialog dialog = Dialog.create(builder -> builder.empty()
+                .base(DialogBase.builder(Component.text(title))
+                        .body(List.of(DialogBody.plainMessage(Component.text(description))))
+                        .inputs(List.of(DialogInput.text("value", Component.text(label)).width(300).maxLength(maxLength).labelVisible(true).build()))
+                        .build())
+                .type(DialogType.confirmation(confirm, cancel)));
+        player.showDialog(dialog);
+        return true;
     }
 
     public record MenuOption(String label, String description, Runnable action) {}
