@@ -91,7 +91,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
         WorldSpawnManager worldSpawnManager = new WorldSpawnManager();
         for (String name : new String[]{"spawn", "setspawn", "sethome", "home", "homes", "delhome", "rtp", "clan", "clanduel", "mace",
                 "fly", "god", "invsee", "echest", "ecsee", "trash", "ranks", "rank", "voice", "ah", "order", "orders", "kit",
-                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpaccept", "tpdeny", "code", "setcode", "menu", "bounty", "playtime", "sit", "lag", "crash", "nick", "unnick", "prank", "register", "login", "logout", "report", "atlas", "stats"}) {
+                "ban", "punish", "banpreset", "banrank", "banhammer", "vanish", "hub", "lobby", "fakebase", "fakore", "money", "eco", "pay", "sell", "shop", "tpa", "tpahere", "tpaccept", "tpdeny", "code", "setcode", "menu", "bounty", "playtime", "sit", "lag", "crash", "nick", "unnick", "prank", "register", "login", "logout", "report", "atlas", "stats"}) {
             registerCommandBridge(name, List.of(), (sender, args) -> {
                 if (name.equals("fakebase") || name.equals("fakore")) worldSpawnManager.onCommand(sender, null, name, args);
                 else onCommand(sender, null, name, args);
@@ -223,7 +223,7 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
                 return true;
             }
             case "hub", "lobby" -> { connectToLobby(sender); return true; }
-            case "sell", "shop", "rtp", "tpa", "tpaccept", "tpdeny" -> {
+            case "sell", "shop", "rtp", "tpa", "tpahere", "tpaccept", "tpdeny" -> {
                 if (sender instanceof Player p && label.equalsIgnoreCase("tpa") && args.length == 0) missingGuiManager.openTargets(p, "tpa");
                 else playerFeaturesManager.onCommand(sender, command, label, args);
                 return true;
