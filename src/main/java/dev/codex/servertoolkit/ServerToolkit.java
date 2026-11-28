@@ -23,8 +23,6 @@ import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.connection.PlayerGameConnection;
 import io.papermc.paper.event.player.PlayerCustomClickEvent;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
@@ -54,7 +52,6 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
     private AuthManager authManager;
     private ReplayManager replayManager;
     private CombatStatsManager combatStatsManager;
-    private final Map<java.util.UUID, Long> rtpCooldowns = new HashMap<>();
 
     @Override
     public void onEnable() {
@@ -424,9 +421,6 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
 
     private void randomTeleport(Player player) {
         if (lobbyMode) { player.sendMessage(color("&cRTP ist auf der Lobby deaktiviert.")); return; }
-        long now = System.currentTimeMillis();
-        long readyAt = rtpCooldowns.getOrDefault(player.getUniqueId(), 0L);
-        if (readyAt > now) { player.sendMessage(color("&cWarte noch " + ((readyAt - now + 999) / 1000) + " Sekunden bis zum nächsten RTP.")); return; }
         String worldName = getConfig().getString("rtp.world", "world");
         World world = getServer().getWorld(worldName);
         if (world == null) { player.sendMessage(color("&cDie RTP-Welt &f" + worldName + " &cwurde nicht gefunden.")); return; }
@@ -443,7 +437,6 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             Location candidate = safeRtpLocation(world, x, z);
             if (candidate != null) {
                 player.teleport(candidate);
-                rtpCooldowns.put(player.getUniqueId(), now + getConfig().getLong("rtp.cooldown-seconds", 60) * 1000L);
                 player.sendMessage(color("&aSicherer Zufallsort gefunden. Viel Glück!")); return;
             }
         }
