@@ -260,10 +260,10 @@ public final class CombatStatsManager implements Listener {
             Long last = playtimeFlush.get(id);
             if (last != null) playtime += Math.max(0, (System.currentTimeMillis() - last) / 1000L);
         }
-        viewer.sendMessage(ChatColor.GOLD + "§lStats von " + ChatColor.YELLOW + name);
-        viewer.sendMessage(ChatColor.GRAY + "Kills: " + ChatColor.GREEN + stats.getInt(path + ".kills"));
-        viewer.sendMessage(ChatColor.GRAY + "Deaths: " + ChatColor.RED + stats.getInt(path + ".deaths"));
-        viewer.sendMessage(ChatColor.GRAY + "Playtime: " + ChatColor.AQUA + formatDuration(playtime));
+        String details = "§7Kills: §a" + stats.getInt(path + ".kills")
+                + "\\n§7Deaths: §c" + stats.getInt(path + ".deaths")
+                + "\\n§7Playtime: §b" + formatDuration(playtime);
+        plugin.popupMenuManager().showInfoDialog(viewer, "Stats von " + name, details);
     }
 
     private String formatDuration(long seconds) {
