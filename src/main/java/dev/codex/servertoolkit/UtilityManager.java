@@ -685,13 +685,9 @@ public final class UtilityManager implements CommandExecutor, Listener {
             var team = board.registerNewTeam(teamName);
             team.setPrefix(headPrefix);
             team.setSuffix(headSuffix);
-            // The client uses the disguised profile name as the scoreboard entry.
-            // Using the real account name means the team prefix/suffix won't attach to nicked players.
-            // Depending on the client/profile refresh timing, the entity may still be
-            // indexed by its account name or already by its disguised profile name.
-            // Register both aliases in the same team so the prefix/suffix always attaches.
-            team.addEntry(target.getName());
-            if (!shownPlayerName.equalsIgnoreCase(target.getName())) team.addEntry(shownPlayerName);
+            // A nicked player must only be registered under the visible profile name.
+            // Adding the account name as a second entry can make the real nameplate appear.
+            team.addEntry(shownPlayerName);
         }
         boolean nicked = plugin.contentToolsManager() != null
                 && plugin.contentToolsManager().nickName(player) != null;
