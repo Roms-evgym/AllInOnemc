@@ -24,9 +24,11 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -34,6 +36,7 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
     private final ServerToolkit plugin;
     private final NamespacedKey actionKey;
     private final Map<UUID, UUID> incomingRequests = new HashMap<>();
+    private final Set<UUID> hereRequests = new HashSet<>();
 
     public PlayerFeaturesManager(ServerToolkit plugin) {
         this.plugin = plugin;
@@ -77,7 +80,8 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
             case "shop" -> openShop(player);
             case "sell" -> { if (args.length == 0) openSellMenu(player); else sell(player, args); }
             case "rtp" -> openRtpMenu(player);
-            case "tpa" -> sendRequest(player, args);
+            case "tpa" -> sendRequest(player, args, false);
+            case "tpahere" -> sendRequest(player, args, true);
             case "tpaccept" -> acceptRequest(player);
             case "tpdeny" -> denyRequest(player);
             default -> { return false; }
@@ -321,21 +325,30 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
         return new Location(world, x + 0.5, floorY + 1, z + 0.5);
     }
 
-    private void sendRequest(Player requester, String[] args) {
-        if (args.length != 1) { requester.sendMessage(color("&cNutzung: /tpa <Spieler>")); return; }
+    private void sendRequest(Player requester, String[] args, boolean requestHere) {
+        String command = requestHere ? "/tpahere" : "/tpa";
+        if (args.length != 1) { requester.sendMessage(color("&cNutzung: " + command + " <Spieler>")); return; }
         Player target = Bukkit.getPlayerExact(args[0]);
         if (target == null || target.equals(requester)) { requester.sendMessage(color("&cSpieler nicht gefunden oder ungültig.")); return; }
-        if (incomingRequests.containsKey(target.getUniqueId())) { requester.sendMessage(color("&cDieser Spieler hat bereits eine offene TPA-Anfrage.")); return; }
+        if (incomingRequests.containsKey(target.getUniqueId())) {
+            requester.sendMessage(color("&cDieser Spieler hat bereits eine offene Teleportanfrage."));
+            return;
+        }
         incomingRequests.put(target.getUniqueId(), requester.getUniqueId());
-        requester.sendMessage(color("&aTPA-Anfrage an &f" + target.getName() + " &agesendet."));
-        target.sendMessage(color("&e" + requester.getName() + " &7möchte sich zu dir teleportieren."));
+        if (requestHere) hereRequests.add(target.getUniqueId());
+        requester.sendMessage(color("&a" + (requestHere ? "Teleport-zu-mir-Anfrage" : "TPA-Anfrage")
+                + " an &f" + target.getName() + " &agesendet."));
+        target.sendMessage(color("&e" + requester.getName() + (requestHere
+                ? " &7möchte dich zu sich teleportieren."
+                : " &7möchte sich zu dir teleportieren.")));
         target.sendMessage(color("&a/tpaccept &7zum Annehmen oder &c/tpdeny &7zum Ablehnen. &8(60 Sekunden)"));
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (incomingRequests.remove(target.getUniqueId(), requester.getUniqueId())) {
+                hereRequests.remove(target.getUniqueId());
                 Player onlineRequester = Bukkit.getPlayer(requester.getUniqueId());
                 Player onlineTarget = Bukkit.getPlayer(target.getUniqueId());
-                if (onlineRequester != null) onlineRequester.sendMessage(color("&cDeine TPA-Anfrage an " + target.getName() + " ist abgelaufen."));
-                if (onlineTarget != null) onlineTarget.sendMessage(color("&7Die TPA-Anfrage ist abgelaufen."));
+                if (onlineRequester != null) onlineRequester.sendMessage(color("&cDeine Teleportanfrage an " + target.getName() + " ist abgelaufen."));
+                if (onlineTarget != null) onlineTarget.sendMessage(color("&7Die Teleportanfrage ist abgelaufen."));
             }
         }, 1200L);
     }
@@ -343,16 +356,24 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
     private void acceptRequest(Player target) {
         UUID requesterId = incomingRequests.remove(target.getUniqueId());
         if (requesterId == null) { target.sendMessage(color("&cDu hast keine offene TPA-Anfrage.")); return; }
+        boolean requestHere = hereRequests.remove(target.getUniqueId());
         Player requester = Bukkit.getPlayer(requesterId);
         if (requester == null) { target.sendMessage(color("&cDer anfragende Spieler ist nicht mehr online.")); return; }
-        requester.teleport(target.getLocation());
-        requester.sendMessage(color("&aTPA angenommen. Du wurdest zu &f" + target.getName() + " &ateleportiert."));
-        target.sendMessage(color("&aDu hast die TPA-Anfrage von &f" + requester.getName() + " &aangenommen."));
+        if (requestHere) {
+            target.teleport(requester.getLocation());
+            target.sendMessage(color("&aDu hast die Anfrage angenommen und wurdest zu &f" + requester.getName() + " &ateleportiert."));
+            requester.sendMessage(color("&a" + target.getName() + " hat angenommen und wurde zu dir teleportiert."));
+        } else {
+            requester.teleport(target.getLocation());
+            requester.sendMessage(color("&aTPA angenommen. Du wurdest zu &f" + target.getName() + " &ateleportiert."));
+            target.sendMessage(color("&aDu hast die TPA-Anfrage von &f" + requester.getName() + " &aangenommen."));
+        }
     }
 
     private void denyRequest(Player target) {
         UUID requesterId = incomingRequests.remove(target.getUniqueId());
-        if (requesterId == null) { target.sendMessage(color("&cDu hast keine offene TPA-Anfrage.")); return; }
+        hereRequests.remove(target.getUniqueId());
+        if (requesterId == null) { target.sendMessage(color("&cDu hast keine offene Teleportanfrage.")); return; }
         Player requester = Bukkit.getPlayer(requesterId);
         target.sendMessage(color("&7TPA-Anfrage abgelehnt."));
         if (requester != null) requester.sendMessage(color("&c" + target.getName() + " hat deine TPA-Anfrage abgelehnt."));
@@ -380,8 +401,16 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        incomingRequests.remove(event.getPlayer().getUniqueId());
-        incomingRequests.values().removeIf(id -> id.equals(event.getPlayer().getUniqueId()));
+        UUID leaving = event.getPlayer().getUniqueId();
+        incomingRequests.remove(leaving);
+        hereRequests.remove(leaving);
+        incomingRequests.entrySet().removeIf(entry -> {
+            if (entry.getValue().equals(leaving)) {
+                hereRequests.remove(entry.getKey());
+                return true;
+            }
+            return false;
+        });
     }
 
     private ItemStack menuItem(Material material, String name, String action) {
