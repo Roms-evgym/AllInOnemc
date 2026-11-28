@@ -654,6 +654,10 @@ public final class UtilityManager implements CommandExecutor, Listener {
                 : rankPrefix(nickRankId == null ? "member" : nickRankId) + nick + clanTag;
         player.setPlayerListName(shownName);
         player.setDisplayName(shownName);
+        // The entity's vanilla overhead label is tied to its original account name.
+        // Hide that label while nicked and render the visible nick as the custom name.
+        player.setCustomName(nick == null ? null : shownName);
+        player.setCustomNameVisible(nick != null);
         PermissionAttachment previous = rankAttachments.remove(player.getUniqueId());
         if (previous != null) previous.remove();
         PermissionAttachment attachment = player.addAttachment(plugin);
@@ -674,7 +678,7 @@ public final class UtilityManager implements CommandExecutor, Listener {
             String displayRank = targetNicked && plugin.contentToolsManager().nickRankId(target) != null
                     ? plugin.contentToolsManager().nickRankId(target) : getRankId(target);
             String nickName = targetNicked ? plugin.contentToolsManager().nickName(target) : null;
-            String shownPlayerName = nickName == null || nickName.isBlank() ? target.getName() : nickName;
+            String shownPlayerName = target.getName();
             String headPrefix = rankPrefix(displayRank) + " ";
             String clan = plugin.clanManager() == null ? null
                     : plugin.clanManager().clanName(target.getUniqueId());
@@ -685,9 +689,12 @@ public final class UtilityManager implements CommandExecutor, Listener {
             var team = board.registerNewTeam(teamName);
             team.setPrefix(headPrefix);
             team.setSuffix(headSuffix);
-            // A nicked player must only be registered under the visible profile name.
-            // Adding the account name as a second entry can make the real nameplate appear.
+            // The real server-side entry is required to suppress the immutable account label.
+            // The nick itself is rendered through Player#setCustomName while nicked.
             team.addEntry(shownPlayerName);
+            team.setOption(org.bukkit.scoreboard.Team.Option.NAME_TAG_VISIBILITY,
+                    targetNicked ? org.bukkit.scoreboard.Team.OptionStatus.NEVER
+                            : org.bukkit.scoreboard.Team.OptionStatus.ALWAYS);
         }
         boolean nicked = plugin.contentToolsManager() != null
                 && plugin.contentToolsManager().nickName(player) != null;
