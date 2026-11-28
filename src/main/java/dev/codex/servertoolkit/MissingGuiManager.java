@@ -44,6 +44,7 @@ final class MissingGuiManager implements Listener {
         mainOption(p,o,"Geld & Überweisen","money",null);
         mainOption(p,o,"Kopfgeld","bounty",null);
         mainOption(p,o,"Spielzeit","playtime",null);
+        mainOption(p,o,"Statistiken","stats",null);
         mainOption(p,o,"Homes","homes",null);
         mainOption(p,o,"Teleport-Anfrage","tpa",null);
         mainOption(p,o,"Anfrage annehmen","tpaccept",null);
@@ -86,6 +87,19 @@ final class MissingGuiManager implements Listener {
         mainOption(p,o,"Spawn setzen","setspawn","servertoolkit.admin");
         option(o,"Schließen","Menü schließen",() -> {});
         show(p,"AllInOneMC – Hauptmenü","Wähle eine Funktion aus.",o);
+    }
+
+    void openStats(Player p) {
+        List<PopupMenuManager.MenuOption> o = new ArrayList<>();
+        option(o,"Meine Statistiken","Kills, Deaths und gesamte Spielzeit",() -> p.performCommand("stats me"));
+        for (Player target : Bukkit.getOnlinePlayers()) {
+            option(o,"Stats: " + target.getName(),"Statistiken dieses Spielers anzeigen",
+                    () -> p.performCommand("stats " + target.getName()));
+        }
+        option(o,"Spieler suchen","Auch Offline-Spieler über ihren Namen suchen",
+                () -> prompt(p,"stats-target","Gib den Spielernamen ein:"));
+        option(o,"Zurück","Hauptmenü öffnen",() -> openMain(p));
+        show(p,"Statistiken","Wähle deine eigenen oder die Statistiken eines Spielers.",o);
     }
 
     void openCode(Player p) { prompt(p,"code","Gib deinen Einlösecode ein:"); }
