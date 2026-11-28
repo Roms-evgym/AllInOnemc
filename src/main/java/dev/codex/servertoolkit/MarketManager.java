@@ -69,7 +69,8 @@ public final class MarketManager implements CommandExecutor, Listener {
         } else if (args[0].equalsIgnoreCase("create")) createOrder(player, args);
         else if (args[0].equalsIgnoreCase("fill")) fillOrder(player, args);
         else if (args[0].equalsIgnoreCase("cancel")) cancelOrder(player, args);
-        else player.sendMessage(color("&6Nutze &f/orders &6für offene Aufträge."));
+        else if (args[0].equalsIgnoreCase("claim")) claimOrderItems(player);
+        else player.sendMessage(color("&6Nutze &f/orders &6oder &f/order claim &6für gelieferte Items."));
         return true;
     }
 
@@ -393,8 +394,59 @@ public final class MarketManager implements CommandExecutor, Listener {
         data.set(path, null);
         save();
         player.sendMessage(color("&aAuftrag erfüllt: &e" + reward + " Coins &awurden gutgeschrieben."));
+        deliverOrderItems(ownerId, material, amount, args[1]);
         Player owner = Bukkit.getPlayer(ownerId);
-        if (owner != null) owner.sendMessage(color("&aDein Auftrag wurde von &f" + player.getName() + " &aerfüllt."));
+        if (owner != null) owner.sendMessage(color("&aDein Auftrag wurde von &f" + player.getName() + " &aerfüllt. Die Items wurden dir geliefert."));
+
+    }
+
+
+    private void deliverOrderItems(UUID ownerId, Material material, int amount, String orderId) {
+        ItemStack delivery = new ItemStack(material, amount);
+        Player owner = Bukkit.getPlayer(ownerId);
+        if (owner != null) {
+            Map<Integer, ItemStack> leftovers = owner.getInventory().addItem(delivery);
+            if (!leftovers.isEmpty()) {
+                ConfigurationSection pending = data.getConfigurationSection("pendingOrderItems." + ownerId);
+                if (pending == null) pending = data.createSection("pendingOrderItems." + ownerId);
+                int next = pending.getKeys(false).size() + 1;
+                pending.set(String.valueOf(next), leftovers.values().iterator().next());
+                owner.sendMessage(color("&eDein Inventar war teilweise voll. Restliche Items: &f/order claim"));
+            }
+        } else {
+            ConfigurationSection pending = data.getConfigurationSection("pendingOrderItems." + ownerId);
+            if (pending == null) pending = data.createSection("pendingOrderItems." + ownerId);
+            int next = pending.getKeys(false).size() + 1;
+            pending.set(String.valueOf(next), delivery);
+        }
+        save();
+    }
+
+    private void claimOrderItems(Player player) {
+        String path = "pendingOrderItems." + player.getUniqueId();
+        ConfigurationSection pending = data.getConfigurationSection(path);
+        if (pending == null || pending.getKeys(false).isEmpty()) {
+            player.sendMessage(color("&7Du hast keine ausstehenden Lieferungen."));
+            return;
+        }
+        int delivered = 0;
+        for (String key : new ArrayList<>(pending.getKeys(false))) {
+            Object stored = pending.get(key);
+            if (!(stored instanceof ItemStack item) || item.getType().isAir()) {
+                pending.set(key, null);
+                continue;
+            }
+            Map<Integer, ItemStack> leftovers = player.getInventory().addItem(item);
+            if (leftovers.isEmpty()) {
+                pending.set(key, null);
+                delivered++;
+            } else {
+                pending.set(key, leftovers.values().iterator().next());
+            }
+        }
+        if (pending.getKeys(false).isEmpty()) data.set(path, null);
+        save();
+        player.sendMessage(color("&a" + delivered + " Lieferung(en) abgeholt. Freier Inventarplatz wird benötigt, um weitere Items abzuholen."));
     }
 
     private void cancelOrder(Player player, String[] args) {
