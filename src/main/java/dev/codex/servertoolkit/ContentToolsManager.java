@@ -361,6 +361,7 @@ final class ContentToolsManager implements Listener {
             else disguised.setProperties(original.getProperties());
             nickSessions.put(player.getUniqueId(), new NickSession(original, nick, rankId, skinName));
             player.setPlayerProfile(disguised);
+            refreshDisguisedProfileForViewers(player);
             plugin.utilityManager().refreshPlayerDisplay(player);
         }));
     }
