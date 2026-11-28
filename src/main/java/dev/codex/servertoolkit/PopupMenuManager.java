@@ -131,6 +131,15 @@ public final class PopupMenuManager {
         return true;
     }
 
+    public void showInfoDialog(Player player, String title, String description) {
+        Dialog dialog = Dialog.create(builder -> builder.empty()
+                .base(DialogBase.builder(Component.text(title))
+                        .body(List.of(DialogBody.plainMessage(Component.text(description))))
+                        .build())
+                .type(DialogType.notice()));
+        player.showDialog(dialog);
+    }
+
     public record MenuOption(String label, String description, Runnable action) {}
 
     private void openBedrockMenu(FloodgateApi api, Player player) {
