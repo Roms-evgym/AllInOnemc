@@ -273,6 +273,10 @@ final class MissingGuiManager implements Listener {
         Player player = event.getPlayer();
         Bukkit.getScheduler().runTask(plugin,() -> {
             if (input.equalsIgnoreCase("-abbrechen")) { player.sendMessage("§cAbgebrochen."); return; }
+            if (action.startsWith("stats-target")) {
+                if (safeName(input) == null) { player.sendMessage("§cUngültiger Spielername."); return; }
+                player.performCommand("stats " + input); return;
+            }
             if (action.startsWith("sethome:")) {
                 String name = safeName(input);
                 if (name == null) { player.sendMessage("§cUngültiger Home-Name."); return; }
