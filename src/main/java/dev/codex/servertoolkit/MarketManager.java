@@ -12,6 +12,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -25,11 +26,13 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Comparator;
 
 public final class MarketManager implements CommandExecutor, Listener {
     private final ServerToolkit plugin;
     private final File file;
     private final YamlConfiguration data;
+    private final Map<UUID, String> pendingSearch = new HashMap<>();
 
     public MarketManager(ServerToolkit plugin) {
         this.plugin = plugin;
@@ -97,48 +100,106 @@ public final class MarketManager implements CommandExecutor, Listener {
         player.sendMessage(color("&aAuktion &e#" + id + " &awurde für &e" + price + " &aCoins eingestellt."));
     }
 
-    private void openAuctionHouse(Player player) {
+    private void openAuctionHouse(Player player) { openAuctionHouse(player, 0, "newest", ""); }
+
+    private void openAuctionHouse(Player player, int page, String sort, String query) {
         ConfigurationSection auctions = data.getConfigurationSection("auctions");
         AuctionHolder holder = new AuctionHolder();
+        holder.page = Math.max(0, page); holder.sort = sort; holder.query = query;
         Inventory inventory = Bukkit.createInventory(holder, 54, color("&6&lAuktionshaus"));
         holder.inventory = inventory;
-        if (auctions != null) {
-            List<String> ids = new ArrayList<>(auctions.getKeys(false));
-            ids.sort((left, right) -> Integer.compare(parseAuctionId(right), parseAuctionId(left)));
-            int slot = 0;
-            for (String id : ids) {
-                if (slot >= 54) break;
-                ItemStack item = readItem("auctions." + id + ".item");
-                if (item == null) continue;
-                String seller = data.getString("auctions." + id + ".sellerName", "Unbekannt");
-                double price = data.getDouble("auctions." + id + ".price");
-                ItemStack display = item.clone();
-                ItemMeta meta = display.getItemMeta();
-                List<String> lore = meta != null && meta.hasLore() ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
-                lore.add(color("&7Verkäufer: &f" + seller));
-                lore.add(color("&7Preis: &6" + price + " Coins"));
-                lore.add(color("&eKlicken zum Kaufen"));
-                if (meta != null) { meta.setLore(lore); display.setItemMeta(meta); }
-                inventory.setItem(slot, display);
-                holder.listings.put(slot, id);
-                slot++;
-            }
+        List<String> ids = new ArrayList<>();
+        if (auctions != null) for (String id : auctions.getKeys(false)) {
+            String path = "auctions." + id;
+            ItemStack item = readItem(path + ".item");
+            if (item == null) continue;
+            String seller = data.getString(path + ".sellerName", "Unbekannt");
+            String searchable = (item.getType().name() + " " + seller + " " + id).toLowerCase(Locale.ROOT);
+            if (!searchable.contains(query.toLowerCase(Locale.ROOT))) continue;
+            ids.add(id);
         }
-        if (holder.listings.isEmpty()) {
-            player.sendMessage(color("&7Es gibt derzeit keine Auktionen."));
-            return;
+        Comparator<String> comparator = switch (sort) {
+            case "price_low" -> Comparator.comparingDouble(id -> data.getDouble("auctions." + id + ".price"));
+            case "price_high" -> Comparator.comparingDouble((String id) -> data.getDouble("auctions." + id + ".price")).reversed();
+            case "name" -> Comparator.comparing(id -> readItem("auctions." + id + ".item").getType().name());
+            default -> Comparator.comparingInt(this::parseAuctionId).reversed();
+        };
+        ids.sort(comparator);
+        int pages = Math.max(1, (ids.size() + 44) / 45);
+        holder.page = Math.min(holder.page, pages - 1);
+        int start = holder.page * 45;
+        for (int index = start; index < Math.min(ids.size(), start + 45); index++) {
+            String id = ids.get(index); String path = "auctions." + id;
+            ItemStack item = readItem(path + ".item"); if (item == null) continue;
+            String seller = data.getString(path + ".sellerName", "Unbekannt");
+            double price = data.getDouble(path + ".price");
+            ItemStack display = item.clone(); ItemMeta meta = display.getItemMeta();
+            List<String> lore = meta != null && meta.hasLore() ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
+            lore.add(color("&7Verkäufer: &f" + seller)); lore.add(color("&7Preis: &6" + price + " Coins"));
+            lore.add(color("&eKlicken zum Kaufen"));
+            if (meta != null) { meta.setLore(lore); display.setItemMeta(meta); }
+            int slot = index - start; inventory.setItem(slot, display); holder.listings.put(slot, id);
         }
+        addControl(inventory, 45, Material.ARROW, "&eVorherige Seite", "page_prev");
+        addControl(inventory, 49, Material.HOPPER, "&bSortierung: " + sortLabel(sort), "sort");
+        addControl(inventory, 50, Material.COMPASS, "&aSuche: " + (query.isEmpty() ? "Alle" : query), "search");
+        addControl(inventory, 53, Material.ARROW, "&eNächste Seite (" + (holder.page + 1) + "/" + pages + ")", "page_next");
+        if (ids.isEmpty()) player.sendMessage(color("&7Keine passenden Auktionen gefunden."));
         player.openInventory(inventory);
+    }
+
+    private void addControl(Inventory inv, int slot, Material material, String name, String action) {
+        ItemStack item = new ItemStack(material); ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(color(name)); meta.getPersistentDataContainer().set(new org.bukkit.NamespacedKey(plugin, "market_action"), org.bukkit.persistence.PersistentDataType.STRING, action);
+        item.setItemMeta(meta); inv.setItem(slot, item);
+    }
+    private String sortLabel(String sort) {
+        return switch (sort) { case "price_low" -> "Preis aufsteigend"; case "price_high" -> "Preis absteigend"; case "name" -> "Name"; default -> "Neueste"; };
+    }
+    private String nextSort(String sort) {
+        return switch (sort) { case "newest" -> "price_low"; case "price_low" -> "price_high"; case "price_high" -> "name"; default -> "newest"; };
+    }
+    private void askSearch(Player player, String kind) {
+        pendingSearch.put(player.getUniqueId(), kind);
+        player.closeInventory();
+        player.sendMessage(color("&eSchreibe deinen Suchbegriff in den Chat. &7Schreibe &cabbrechen &7zum Abbrechen."));
+    }
+    @EventHandler
+    public void onSearchChat(AsyncPlayerChatEvent event) {
+        String kind = pendingSearch.remove(event.getPlayer().getUniqueId());
+        if (kind == null) return;
+        event.setCancelled(true);
+        String query = event.getMessage().equalsIgnoreCase("abbrechen") ? "" : event.getMessage().trim();
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!event.getPlayer().isOnline()) return;
+            if (kind.equals("ah")) openAuctionHouse(event.getPlayer(), 0, "newest", query);
+            else showOrders(event.getPlayer(), 0, "newest", query);
+        });
     }
 
     @EventHandler
     public void onOrdersClick(InventoryClickEvent event) {
-        if (!(event.getView().getTopInventory().getHolder() instanceof OrdersHolder holder)) return;
+        Inventory top = event.getView().getTopInventory();
+        if (!(top.getHolder() instanceof OrdersHolder holder)) return;
         event.setCancelled(true);
-        if (!(event.getWhoClicked() instanceof Player player) || event.getRawSlot() < 0
-                || event.getRawSlot() >= event.getView().getTopInventory().getSize()) return;
+        if (!(event.getWhoClicked() instanceof Player player) || event.getRawSlot() < 0 || event.getRawSlot() >= top.getSize()) return;
+        if (event.getRawSlot() >= 45) {
+            String action = controlAction(event.getCurrentItem());
+            if ("page_prev".equals(action)) showOrders(player, Math.max(0, holder.page - 1), holder.sort, holder.query);
+            else if ("page_next".equals(action)) showOrders(player, holder.page + 1, holder.sort, holder.query);
+            else if ("sort".equals(action)) showOrders(player, 0, nextSort(holder.sort), holder.query);
+            else if ("search".equals(action)) askSearch(player, "orders");
+            return;
+        }
         String id = holder.orders.get(event.getRawSlot());
         if (id != null) fillOrder(player, new String[]{"fill", id});
+    }
+
+    private String controlAction(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) return "";
+        return item.getItemMeta().getPersistentDataContainer().getOrDefault(
+                new org.bukkit.NamespacedKey(plugin, "market_action"),
+                org.bukkit.persistence.PersistentDataType.STRING, "");
     }
 
     private int parseAuctionId(String value) {
@@ -147,9 +208,18 @@ public final class MarketManager implements CommandExecutor, Listener {
 
     @EventHandler
     public void onAuctionClick(InventoryClickEvent event) {
-        if (!(event.getInventory().getHolder() instanceof AuctionHolder holder)) return;
+        if (!(event.getView().getTopInventory().getHolder() instanceof AuctionHolder holder)) return;
         event.setCancelled(true);
-        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (!(event.getWhoClicked() instanceof Player player) || event.getRawSlot() < 0
+                || event.getRawSlot() >= event.getView().getTopInventory().getSize()) return;
+        if (event.getRawSlot() >= 45) {
+            String action = controlAction(event.getCurrentItem());
+            if ("page_prev".equals(action)) openAuctionHouse(player, Math.max(0, holder.page - 1), holder.sort, holder.query);
+            else if ("page_next".equals(action)) openAuctionHouse(player, holder.page + 1, holder.sort, holder.query);
+            else if ("sort".equals(action)) openAuctionHouse(player, 0, nextSort(holder.sort), holder.query);
+            else if ("search".equals(action)) askSearch(player, "ah");
+            return;
+        }
         String id = holder.listings.get(event.getRawSlot());
         if (id != null) buyListing(player, id);
     }
@@ -252,37 +322,50 @@ public final class MarketManager implements CommandExecutor, Listener {
         player.sendMessage(color("&aAuftrag &e#" + id + " &aeingestellt: &f" + amount + "x " + material.name() + " &afür &e" + reward + " Coins."));
     }
 
-    private void showOrders(Player player) {
+    private void showOrders(Player player) { showOrders(player, 0, "newest", ""); }
+
+    private void showOrders(Player player, int page, String sort, String query) {
         ConfigurationSection orders = data.getConfigurationSection("orders");
         OrdersHolder holder = new OrdersHolder();
+        holder.page = Math.max(0, page); holder.sort = sort; holder.query = query;
         Inventory inventory = Bukkit.createInventory(holder, 54, color("&6&lSpieler-Aufträge"));
         holder.inventory = inventory;
-        if (orders != null) {
-            List<String> ids = new ArrayList<>(orders.getKeys(false));
-            ids.sort((left, right) -> Integer.compare(parseAuctionId(right), parseAuctionId(left)));
-            int slot = 0;
-            for (String id : ids) {
-                if (slot >= 54) break;
-                String path = "orders." + id;
-                String owner = data.getString(path + ".ownerName", "Spieler");
-                Material material = Material.matchMaterial(data.getString(path + ".material", "STONE"));
-                if (material == null || !material.isItem()) material = Material.PAPER;
-                int amount = data.getInt(path + ".amount");
-                double reward = data.getDouble(path + ".reward");
-                ItemStack display = new ItemStack(material, Math.max(1, Math.min(64, amount)));
-                ItemMeta meta = display.getItemMeta();
-                meta.setDisplayName(color("&e#" + id + " &f" + amount + "x " + material.name()));
-                meta.setLore(List.of(color("&7Von: &f" + owner), color("&7Belohnung: &6" + reward + " Coins"), color("&aKlicken zum Erfüllen")));
-                display.setItemMeta(meta);
-                inventory.setItem(slot, display);
-                holder.orders.put(slot, id);
-                slot++;
-            }
+        List<String> ids = new ArrayList<>();
+        if (orders != null) for (String id : orders.getKeys(false)) {
+            String path = "orders." + id;
+            String materialName = data.getString(path + ".material", "STONE");
+            String owner = data.getString(path + ".ownerName", "Spieler");
+            if (!(materialName + " " + owner + " " + id).toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))) continue;
+            ids.add(id);
         }
-        if (holder.orders.isEmpty()) {
-            player.sendMessage(color("&7Keine offenen Aufträge. Erstelle einen mit &f/order create"));
-            return;
+        Comparator<String> comparator = switch (sort) {
+            case "price_low" -> Comparator.comparingDouble(id -> data.getDouble("orders." + id + ".reward"));
+            case "price_high" -> Comparator.comparingDouble((String id) -> data.getDouble("orders." + id + ".reward")).reversed();
+            case "name" -> Comparator.comparing(id -> data.getString("orders." + id + ".material", ""));
+            default -> Comparator.comparingInt(this::parseAuctionId).reversed();
+        };
+        ids.sort(comparator);
+        int pages = Math.max(1, (ids.size() + 44) / 45);
+        holder.page = Math.min(holder.page, pages - 1);
+        int start = holder.page * 45;
+        for (int index = start; index < Math.min(ids.size(), start + 45); index++) {
+            String id = ids.get(index); String path = "orders." + id;
+            String owner = data.getString(path + ".ownerName", "Spieler");
+            Material material = Material.matchMaterial(data.getString(path + ".material", "STONE"));
+            if (material == null || !material.isItem()) material = Material.PAPER;
+            int amount = data.getInt(path + ".amount"); double reward = data.getDouble(path + ".reward");
+            ItemStack display = new ItemStack(material, Math.max(1, Math.min(64, amount)));
+            ItemMeta meta = display.getItemMeta();
+            meta.setDisplayName(color("&e#" + id + " &f" + amount + "x " + material.name()));
+            meta.setLore(List.of(color("&7Von: &f" + owner), color("&7Belohnung: &6" + reward + " Coins"), color("&aKlicken zum Erfüllen")));
+            display.setItemMeta(meta);
+            int slot = index - start; inventory.setItem(slot, display); holder.orders.put(slot, id);
         }
+        addControl(inventory, 45, Material.ARROW, "&eVorherige Seite", "page_prev");
+        addControl(inventory, 49, Material.HOPPER, "&bSortierung: " + sortLabel(sort), "sort");
+        addControl(inventory, 50, Material.COMPASS, "&aSuche: " + (query.isEmpty() ? "Alle" : query), "search");
+        addControl(inventory, 53, Material.ARROW, "&eNächste Seite (" + (holder.page + 1) + "/" + pages + ")", "page_next");
+        if (ids.isEmpty()) player.sendMessage(color("&7Keine passenden Aufträge gefunden."));
         player.openInventory(inventory);
     }
 
@@ -385,12 +468,12 @@ public final class MarketManager implements CommandExecutor, Listener {
     private String color(String message) { return ChatColor.translateAlternateColorCodes('&', message); }
 
     private static final class AuctionHolder implements InventoryHolder {
-        private Inventory inventory;
+        private Inventory inventory; private int page; private String sort = "newest"; private String query = "";
         private final Map<Integer, String> listings = new HashMap<>();
         @Override public Inventory getInventory() { return inventory; }
     }
     private static final class OrdersHolder implements InventoryHolder {
-        private Inventory inventory;
+        private Inventory inventory; private int page; private String sort = "newest"; private String query = "";
         private final Map<Integer, String> orders = new HashMap<>();
         @Override public Inventory getInventory() { return inventory; }
     }
