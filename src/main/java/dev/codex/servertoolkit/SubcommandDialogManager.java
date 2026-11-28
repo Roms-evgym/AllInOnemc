@@ -58,6 +58,15 @@ final class SubcommandDialogManager implements Listener {
         return new PopupMenuManager.MenuOption(label,desc,()->prompt(p,command,hint));
     }
     private void prompt(Player p,String command,String hint) {
+        boolean shown = plugin.popupMenuManager().showInputDialog(p, "Eingabe", hint,
+                "Wert eingeben", 160, input -> {
+                    if (input == null || input.isBlank() || input.length() > 160
+                            || input.chars().anyMatch(Character::isISOControl)) {
+                        p.sendMessage("§cUngültige Eingabe."); return;
+                    }
+                    p.performCommand(command + " " + input);
+                });
+        if (shown) return;
         pending.put(p.getUniqueId(),command);
         p.closeInventory();
         p.sendMessage("§e"+hint);
