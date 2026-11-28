@@ -77,7 +77,16 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
             sender.sendMessage("Dieser Befehl ist nur im Spiel verfügbar.");
             return true;
         }
-        switch (label.toLowerCase(Locale.ROOT)) {
+        String root = label.toLowerCase(Locale.ROOT);
+        if (plugin.combatStatsManager() != null && plugin.combatStatsManager().isInCombat(player)
+                && !player.isOp() && !player.hasPermission("servertoolkit.admin")
+                && !player.hasPermission("servertoolkit.combat.bypass")
+                && (root.equals("shop") || root.equals("rtp") || root.equals("tpa") || root.equals("tpahere")
+                    || root.equals("tpaccept") || root.equals("tpdeny"))) {
+            player.sendMessage(color("&cShop- und Teleport-Aktionen sind während eines Kampfes gesperrt."));
+            return true;
+        }
+        switch (root) {
             case "shop" -> openShop(player);
             case "sell" -> { if (args.length == 0) openSellMenu(player); else sell(player, args); }
             case "rtp" -> openRtpMenu(player);
