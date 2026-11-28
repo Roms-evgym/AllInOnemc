@@ -108,6 +108,13 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
             return;
         }
         String action = event.getIdentifier().value();
+        if (combatStatsManager != null && combatStatsManager.isInCombat(player)
+                && !player.isOp() && !player.hasPermission("servertoolkit.admin")
+                && !player.hasPermission("servertoolkit.combat.bypass")
+                && !action.equals("menu_ah") && !action.equals("menu_orders")) {
+            player.sendMessage(color("&cDiese Aktion ist während eines Kampfes gesperrt."));
+            return;
+        }
         String command;
         String permission;
         switch (action) {
