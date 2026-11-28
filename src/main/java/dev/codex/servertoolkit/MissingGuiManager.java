@@ -189,10 +189,79 @@ final class MissingGuiManager implements Listener {
     }
 
     private void prompt(Player p, String action, String instruction) {
+        boolean shown = plugin.popupMenuManager().showInputDialog(p, "Eingabe", instruction,
+                "Wert eingeben", 160, input -> handleDialogInput(p, action, input));
+        if (shown) return;
         chatActions.put(p.getUniqueId(),action);
         p.closeInventory();
         p.sendMessage("§e" + instruction);
         p.sendMessage("§7Schreibe den Wert in den Chat. Mit §c-abbrechen §7brichst du ab.");
+    }
+
+    private void handleDialogInput(Player player, String action, String rawInput) {
+        String input = rawInput == null ? "" : rawInput.trim();
+        if (input.isBlank() || input.length() > 160 || input.chars().anyMatch(Character::isISOControl)) {
+            player.sendMessage("§cUngültige Eingabe."); return;
+        }
+        if (action.startsWith("stats-target")) {
+            if (!safeName(input)) { player.sendMessage("§cUngültiger Spielername."); return; }
+            player.performCommand("stats " + input); return;
+        }
+        if (action.startsWith("sethome:")) {
+            String name = safeName(input);
+            if (name == null) { player.sendMessage("§cUngültiger Home-Name."); return; }
+            player.performCommand("sethome " + name); return;
+        }
+        if (action.startsWith("code")) {
+            String code = safeToken(input);
+            if (code == null) { player.sendMessage("§cUngültiger Code."); return; }
+            player.performCommand("code " + code); return;
+        }
+        if (action.startsWith("setcode-code:")) {
+            String type = action.substring("setcode-code:".length());
+            String code = safeToken(input);
+            if (code == null) { player.sendMessage("§cUngültiger Code."); return; }
+            prompt(player,"setcode-value:" + type + ":" + code,
+                    type.equals("rank") ? "Gib jetzt die Rang-ID ein:" : "Gib jetzt den Geldbetrag ein:"); return;
+        }
+        if (action.startsWith("setcode-value:")) {
+            String[] parts = action.split(":",3);
+            if (parts.length != 3) return;
+            String value = parts[1].equals("money")
+                    ? (input.matches("[0-9]+([.,][0-9]{1,2})?") ? input.replace(',','.') : null)
+                    : safeToken(input);
+            if (value == null) { player.sendMessage("§cUngültige Eingabe."); return; }
+            player.performCommand("setcode " + parts[2] + " " + parts[1] + " " + value); return;
+        }
+        if (action.equals("fakore")) {
+            if (!input.matches("[A-Za-z0-9_]{2,32}( [1-9][0-9]{0,2})?")) {
+                player.sendMessage("§cUngültig. Beispiel: DIAMOND_ORE 8"); return;
+            }
+            player.performCommand("fakore " + input); return;
+        }
+        if (action.startsWith("ban-reason:")) {
+            String reason = input.replaceAll("[^A-Za-z0-9 _.,!?-]","");
+            if (reason.isBlank() || reason.length() > 100) { player.sendMessage("§cUngültiger Grund."); return; }
+            player.performCommand("ban " + action.substring("ban-reason:".length()) + " " + reason); return;
+        }
+        if (action.startsWith("punish-preset:")) {
+            String preset = safeToken(input);
+            if (preset == null) { player.sendMessage("§cUngültige Preset-ID."); return; }
+            player.performCommand("punish " + action.substring("punish-preset:".length()) + " " + preset); return;
+        }
+        if (action.startsWith("amount:")) {
+            String[] parts = action.split(":",3);
+            if (parts.length != 3 || !input.matches("[0-9]+([.,][0-9]{1,2})?")) {
+                player.sendMessage("§cBitte einen gültigen Betrag eingeben."); return;
+            }
+            String amount = input.replace(',','.');
+            switch (parts[1]) {
+                case "pay" -> player.performCommand("pay " + parts[2] + " " + amount);
+                case "bounty" -> player.performCommand("bounty " + parts[2] + " " + amount);
+                case "eco-give", "eco-take", "eco-set" -> player.performCommand("eco " + parts[1].substring(4) + " " + parts[2] + " " + amount);
+                default -> {}
+            }
+        }
     }
 
     @EventHandler
