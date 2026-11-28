@@ -40,6 +40,9 @@ import java.util.List;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.permissions.PermissionAttachment;
 import org.bukkit.permissions.Permission;
+import org.bukkit.plugin.Plugin;
+import java.util.Map;
+import java.util.TreeSet;
 
 public final class UtilityManager implements CommandExecutor, Listener {
     private final ServerToolkit plugin;
@@ -391,32 +394,7 @@ public final class UtilityManager implements CommandExecutor, Listener {
 
     private void openVanillaPermissionMenu(Player player, String id, int page) {
         if (!canManageRanks(player) || !plugin.getConfig().isConfigurationSection("ranks." + id)) return;
-        List<String> nodes = new ArrayList<>(Bukkit.getPluginManager().getPermissions().stream().map(Permission::getName).toList());
-        nodes.addAll(plugin.getConfig().getStringList("ranks." + id + ".permissions"));
-        nodes.addAll(List.of("minecraft.command.help", "minecraft.command.list", "minecraft.command.me",
-                "minecraft.command.msg", "minecraft.command.say", "minecraft.command.teleport",
-                "minecraft.command.gamemode", "minecraft.command.give", "minecraft.command.effect",
-                "minecraft.command.enchant", "minecraft.command.time", "minecraft.command.weather",
-                "minecraft.command.clear", "minecraft.command.kick", "minecraft.command.ban",
-                "minecraft.command.pardon", "minecraft.command.op", "minecraft.command.deop",
-                "minecraft.command.whitelist", "minecraft.command.stop", "minecraft.command.save-all",
-                "bukkit.command.help", "bukkit.command.plugins", "bukkit.command.version", "bukkit.command.reload",
-                "paper.command.version", "paper.command.heap", "paper.command.entity", "paper.command.mobcaps",
-                "minecraft.command.advancement", "minecraft.command.attribute", "minecraft.command.bossbar",
-                "minecraft.command.clone", "minecraft.command.damage", "minecraft.command.data", "minecraft.command.datapack",
-                "minecraft.command.debug", "minecraft.command.defaultgamemode", "minecraft.command.difficulty",
-                "minecraft.command.fill", "minecraft.command.forceload", "minecraft.command.function",
-                "minecraft.command.item", "minecraft.command.locate", "minecraft.command.locatebiome",
-                "minecraft.command.particle", "minecraft.command.place", "minecraft.command.playsound",
-                "minecraft.command.recipe", "minecraft.command.return", "minecraft.command.ride",
-                "minecraft.command.rotate", "minecraft.command.schedule", "minecraft.command.scoreboard",
-                "minecraft.command.setblock", "minecraft.command.setworldspawn", "minecraft.command.spawnpoint",
-                "minecraft.command.spectate", "minecraft.command.spreadplayers", "minecraft.command.summon",
-                "minecraft.command.tag", "minecraft.command.team", "minecraft.command.teammsg",
-                "minecraft.command.title", "minecraft.command.trigger", "minecraft.command.waypoint",
-                "minecraft.command.worldborder"));
-        nodes = nodes.stream().filter(node -> node != null && node.matches("[a-zA-Z0-9_.:-]+"))
-                .distinct().sorted(String.CASE_INSENSITIVE_ORDER).toList();
+        List<String> nodes = collectAllPermissionNodes(id);
         int pageSize = 24;
         int maxPage = Math.max(0, (nodes.size() - 1) / pageSize);
         int currentPage = Math.max(0, Math.min(page, maxPage));
@@ -443,6 +421,69 @@ public final class UtilityManager implements CommandExecutor, Listener {
         options.add(new PopupMenuManager.MenuOption("« Zur Rangbearbeitung", "Zurück", () -> openRankEditor(player, id)));
         plugin.popupMenuManager().showMenu(player, "Rechte " + id + " (" + (currentPage + 1) + "/" + (maxPage + 1) + ")",
                 "Tippe einen Permission-Node an, um ihn umzuschalten.", options);
+    }
+
+    private List<String> collectAllPermissionNodes(String rankId) {
+        Set<String> nodes = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+
+        // Permission registry: includes nodes registered by every currently loaded plugin.
+        for (Permission permission : Bukkit.getPluginManager().getPermissions()) {
+            addPermissionNode(nodes, permission.getName());
+        }
+
+        // Plugin descriptors also expose declared permissions and command permission nodes,
+        // including commands whose permission was not registered as a separate Permission.
+        for (Plugin installed : Bukkit.getPluginManager().getPlugins()) {
+            for (Permission permission : installed.getDescription().getPermissions()) {
+                addPermissionNode(nodes, permission.getName());
+            }
+            Map<String, Map<String, Object>> commands = installed.getDescription().getCommands();
+            if (commands != null) {
+                for (Map<String, Object> command : commands.values()) {
+                    Object permission = command.get("permission");
+                    if (permission instanceof String value) {
+                        for (String node : value.split("[;,]")) addPermissionNode(nodes, node);
+                    }
+                }
+            }
+        }
+
+        // Paper's command map includes the live command tree, including vanilla Minecraft
+        // commands and dynamically registered plugin commands. Reflection keeps this optional
+        // across server implementations; the permission registry/metadata above remain fallback.
+        try {
+            Object commandMap = Bukkit.getServer().getClass().getMethod("getCommandMap").invoke(Bukkit.getServer());
+            Object knownCommands = commandMap.getClass().getMethod("getKnownCommands").invoke(commandMap);
+            if (knownCommands instanceof Map<?, ?> commands) {
+                for (Map.Entry<?, ?> entry : commands.entrySet()) {
+                    String commandKey = String.valueOf(entry.getKey()).toLowerCase(Locale.ROOT);
+                    Object command = entry.getValue();
+                    try {
+                        Object permission = command.getClass().getMethod("getPermission").invoke(command);
+                        if (permission instanceof String value) {
+                            for (String node : value.split("[;,]")) addPermissionNode(nodes, node);
+                        }
+                    } catch (ReflectiveOperationException ignored) { }
+                    if (commandKey.startsWith("minecraft:")) {
+                        addPermissionNode(nodes, "minecraft.command." + commandKey.substring("minecraft:".length()));
+                    }
+                }
+            }
+        } catch (ReflectiveOperationException | RuntimeException exception) {
+            plugin.getLogger().fine("Live command permission discovery unavailable: " + exception.getMessage());
+        }
+
+        // Preserve configured nodes even if their source plugin is temporarily offline.
+        for (String configured : plugin.getConfig().getStringList("ranks." + rankId + ".permissions")) {
+            addPermissionNode(nodes, configured);
+        }
+        return new ArrayList<>(nodes);
+    }
+
+    private void addPermissionNode(Set<String> nodes, String raw) {
+        if (raw == null) return;
+        String node = raw.trim().toLowerCase(Locale.ROOT);
+        if (!node.isEmpty() && node.length() <= 200 && node.matches("[a-z0-9_.:-]+")) nodes.add(node);
     }
 
     private List<String> rankPermissionChoices(String id) {
@@ -594,6 +635,11 @@ public final class UtilityManager implements CommandExecutor, Listener {
 
     public void refreshPlayerDisplay(Player player) {
         refreshPlayer(player);
+        refreshAllNameplates();
+    }
+
+    void refreshAllNameplates() {
+        for (Player viewer : Bukkit.getOnlinePlayers()) updateScoreboard(viewer);
     }
 
     private void refreshPlayer(Player player) {
@@ -605,7 +651,7 @@ public final class UtilityManager implements CommandExecutor, Listener {
         String clanTag = clan == null || clan.isBlank() ? "" : color(" &8[&e" + clan + "&8]");
         String nickRankId = nick == null || plugin.contentToolsManager() == null ? null : plugin.contentToolsManager().nickRankId(player);
         String shownName = nick == null ? prefix + player.getName() + clanTag
-                : rankPrefix(nickRankId == null ? "member" : nickRankId) + nick;
+                : rankPrefix(nickRankId == null ? "member" : nickRankId) + nick + clanTag;
         player.setPlayerListName(shownName);
         player.setDisplayName(shownName);
         PermissionAttachment previous = rankAttachments.remove(player.getUniqueId());
@@ -641,7 +687,11 @@ public final class UtilityManager implements CommandExecutor, Listener {
             team.setSuffix(headSuffix);
             // The client uses the disguised profile name as the scoreboard entry.
             // Using the real account name means the team prefix/suffix won't attach to nicked players.
-            team.addEntry(shownPlayerName);
+            // Depending on the client/profile refresh timing, the entity may still be
+            // indexed by its account name or already by its disguised profile name.
+            // Register both aliases in the same team so the prefix/suffix always attaches.
+            team.addEntry(target.getName());
+            if (!shownPlayerName.equalsIgnoreCase(target.getName())) team.addEntry(shownPlayerName);
         }
         boolean nicked = plugin.contentToolsManager() != null
                 && plugin.contentToolsManager().nickName(player) != null;
