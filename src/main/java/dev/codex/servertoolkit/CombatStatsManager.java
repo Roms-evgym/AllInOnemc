@@ -260,9 +260,9 @@ public final class CombatStatsManager implements Listener {
             Long last = playtimeFlush.get(id);
             if (last != null) playtime += Math.max(0, (System.currentTimeMillis() - last) / 1000L);
         }
-        String details = "§7Kills: §a" + stats.getInt(path + ".kills")
-                + "\\n§7Deaths: §c" + stats.getInt(path + ".deaths")
-                + "\\n§7Playtime: §b" + formatDuration(playtime);
+        String details = "Kills: " + stats.getInt(path + ".kills")
+                + "\nDeaths: " + stats.getInt(path + ".deaths")
+                + "\nPlaytime: " + formatDuration(playtime);
         plugin.popupMenuManager().showInfoDialog(viewer, "Stats von " + name, details);
     }
 
