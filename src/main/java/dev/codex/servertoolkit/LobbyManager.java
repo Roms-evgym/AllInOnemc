@@ -5,8 +5,6 @@ import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -17,7 +15,6 @@ import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -141,48 +138,6 @@ public final class LobbyManager implements Listener {
         if (!(event.getWhoClicked() instanceof Player player) || event.getClickedInventory() != holder.inventory) return;
         connectToServer(player, holder.targets.get(event.getSlot()));
         player.closeInventory();
-    }
-
-    /** Players may freely explore the lobby, but the world itself is protected. */
-    @EventHandler
-    public void onLobbyBlockBreak(BlockBreakEvent event) {
-        if (!plugin.isLobbyMode()) return;
-        event.setCancelled(true);
-    }
-
-    @EventHandler
-    public void onLobbyBlockPlace(BlockPlaceEvent event) {
-        if (!plugin.isLobbyMode()) return;
-        event.setCancelled(true);
-    }
-
-    @EventHandler
-    public void onFoodChange(FoodLevelChangeEvent event) {
-        if (!(event.getEntity() instanceof Player player) || !plugin.isLobbyMode()
-                || !plugin.getConfig().getBoolean("lobby.protection.hunger", true)) return;
-        event.setCancelled(true);
-        player.setFoodLevel(20);
-        player.setSaturation(20f);
-    }
-
-    @EventHandler
-    public void onPickup(EntityPickupItemEvent event) {
-        if (plugin.isLobbyMode() && plugin.getConfig().getBoolean("lobby.protection.item-pickup", true)
-                && event.getEntity() instanceof Player) event.setCancelled(true);
-    }
-
-    @EventHandler
-    public void onVoidFall(PlayerMoveEvent event) {
-        if (!plugin.isLobbyMode() || !plugin.getConfig().getBoolean("lobby.void-rescue.enabled", true)) return;
-        int threshold = plugin.getConfig().getInt("lobby.void-rescue.y", -10);
-        if (event.getTo() == null || event.getTo().getY() >= threshold) return;
-        Location spawn = plugin.loadSpawn();
-        if (spawn == null) {
-            World world = event.getPlayer().getWorld();
-            spawn = world.getSpawnLocation();
-        }
-        event.getPlayer().teleport(spawn);
-        event.getPlayer().sendMessage(color("&aDu wurdest zum Lobby-Spawn zurückgebracht."));
     }
 
     private String color(String text) { return ChatColor.translateAlternateColorCodes('&', text); }
