@@ -175,8 +175,12 @@ public final class ServerToolkit extends JavaPlugin implements Listener, Command
                 return true;
             }
             case "stats" -> {
-                if (sender instanceof Player p) combatStatsManager.handleStats(p, args);
-                else sender.sendMessage("Nur im Spiel verfügbar.");
+                if (sender instanceof Player p) {
+                    if (args.length == 0) missingGuiManager.openStats(p);
+                    else if (args.length == 1 && args[0].equalsIgnoreCase("me"))
+                        combatStatsManager.handleStats(p, new String[0]);
+                    else combatStatsManager.handleStats(p, args);
+                } else sender.sendMessage("Nur im Spiel verfügbar.");
                 return true;
             }
             case "playtime" -> {
