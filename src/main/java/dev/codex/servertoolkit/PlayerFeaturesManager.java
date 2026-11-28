@@ -16,6 +16,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -35,6 +36,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public final class PlayerFeaturesManager implements CommandExecutor, Listener {
     private final ServerToolkit plugin;
     private final NamespacedKey actionKey;
+    private final Set<UUID> pendingShopSearch = new HashSet<>();
     private final Map<UUID, UUID> incomingRequests = new HashMap<>();
     private final Set<UUID> hereRequests = new HashSet<>();
 
@@ -88,32 +90,60 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
         return true;
     }
 
-    private void openShop(Player player) {
+    private void openShop(Player player) { openShop(player, 0, "name", ""); }
+
+    private void openShop(Player player, int page, String sort, String query) {
+        if (plugin.combatStatsManager() != null && plugin.combatStatsManager().isInCombat(player)
+                && !player.isOp() && !player.hasPermission("servertoolkit.admin")
+                && !player.hasPermission("servertoolkit.combat.bypass")) {
+            player.closeInventory(); player.sendMessage(color("&cDu kannst den Shop während eines Kampfes nicht öffnen.")); return;
+        }
         ConfigurationSection items = plugin.getConfig().getConfigurationSection("shop.items");
-        ShopHolder holder = new ShopHolder();
+        ShopHolder holder = new ShopHolder(); holder.page = Math.max(0, page); holder.sort = sort; holder.query = query;
         Inventory inventory = Bukkit.createInventory(holder, 54, color("&6&lServer-Shop"));
         holder.inventory = inventory;
-        if (items != null) {
-            List<String> ids = new ArrayList<>(items.getKeys(false));
-            ids.sort(String.CASE_INSENSITIVE_ORDER);
-            int slot = 0;
-            for (String id : ids) {
-                if (slot >= 54) break;
-                Material material = Material.matchMaterial(id);
-                double price = plugin.getConfig().getDouble("shop.items." + id + ".price", -1);
-                int amount = Math.max(1, Math.min(64, plugin.getConfig().getInt("shop.items." + id + ".amount", 1)));
-                if (material == null || !material.isItem() || material.isAir() || price <= 0) continue;
-                ItemStack display = new ItemStack(material, amount);
-                ItemMeta meta = display.getItemMeta();
-                meta.setDisplayName(color("&e" + pretty(id)));
-                meta.setLore(List.of(color("&7Preis: &6" + price + " Coins"), color("&aKlicken zum Kaufen")));
-                meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "buy:" + id);
-                display.setItemMeta(meta);
-                inventory.setItem(slot++, display);
-            }
+        List<String> ids = new ArrayList<>();
+        if (items != null) for (String id : items.getKeys(false)) {
+            Material material = Material.matchMaterial(id);
+            double price = plugin.getConfig().getDouble("shop.items." + id + ".price", -1);
+            if (material == null || !material.isItem() || material.isAir() || price <= 0) continue;
+            if (!(pretty(id) + " " + id).toLowerCase(Locale.ROOT).contains(query.toLowerCase(Locale.ROOT))) continue;
+            ids.add(id);
         }
-        if (inventory.isEmpty()) { player.sendMessage(color("&cDer Shop enthält derzeit keine Artikel.")); return; }
+        if ("price_low".equals(sort)) ids.sort(java.util.Comparator.comparingDouble(id -> plugin.getConfig().getDouble("shop.items." + id + ".price")));
+        else if ("price_high".equals(sort)) ids.sort(java.util.Comparator.comparingDouble((String id) -> plugin.getConfig().getDouble("shop.items." + id + ".price")).reversed());
+        else ids.sort(String.CASE_INSENSITIVE_ORDER);
+        int pages = Math.max(1, (ids.size() + 44) / 45); holder.page = Math.min(holder.page, pages - 1);
+        int start = holder.page * 45;
+        for (int index = start; index < Math.min(ids.size(), start + 45); index++) {
+            String id = ids.get(index); Material material = Material.matchMaterial(id);
+            double price = plugin.getConfig().getDouble("shop.items." + id + ".price", -1);
+            int amount = Math.max(1, Math.min(64, plugin.getConfig().getInt("shop.items." + id + ".amount", 1)));
+            ItemStack display = new ItemStack(material, amount); ItemMeta meta = display.getItemMeta();
+            meta.setDisplayName(color("&e" + pretty(id)));
+            meta.setLore(List.of(color("&7Preis: &6" + price + " Coins"), color("&aKlicken zum Kaufen")));
+            meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "buy:" + id);
+            display.setItemMeta(meta); inventory.setItem(index - start, display);
+        }
+        shopControl(inventory, 45, Material.ARROW, "&eVorherige Seite", "shop_prev");
+        shopControl(inventory, 49, Material.HOPPER, "&bSortierung: " + ("price_low".equals(sort) ? "Preis ↑" : "price_high".equals(sort) ? "Preis ↓" : "Name"), "shop_sort");
+        shopControl(inventory, 50, Material.COMPASS, "&aSuche: " + (query.isEmpty() ? "Alle" : query), "shop_search");
+        shopControl(inventory, 53, Material.ARROW, "&eNächste Seite (" + (holder.page + 1) + "/" + pages + ")", "shop_next");
+        if (ids.isEmpty()) player.sendMessage(color("&cKeine passenden Shop-Artikel gefunden."));
         player.openInventory(inventory);
+    }
+
+    private void shopControl(Inventory inventory, int slot, Material material, String name, String action) {
+        ItemStack item = new ItemStack(material); ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(color(name)); meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, action);
+        item.setItemMeta(meta); inventory.setItem(slot, item);
+    }
+
+    @EventHandler
+    public void onShopSearchChat(AsyncPlayerChatEvent event) {
+        if (!pendingShopSearch.remove(event.getPlayer().getUniqueId())) return;
+        event.setCancelled(true); String query = event.getMessage().equalsIgnoreCase("abbrechen") ? "" : event.getMessage().trim();
+        Bukkit.getScheduler().runTask(plugin, () -> { if (event.getPlayer().isOnline()) openShop(event.getPlayer(), 0, "name", query); });
     }
 
     private void buy(Player player, String id) {
@@ -373,15 +403,29 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
 
     @EventHandler
     public void onMenuClick(InventoryClickEvent event) {
-        InventoryHolder holder = event.getView().getTopInventory().getHolder();
+        Inventory top = event.getView().getTopInventory();
+        InventoryHolder holder = top.getHolder();
         if (!(holder instanceof ShopHolder) && !(holder instanceof RtpHolder) && !(holder instanceof SellHolder)) return;
         event.setCancelled(true);
-        if (!(event.getWhoClicked() instanceof Player player) || event.getRawSlot() < 0
-                || event.getRawSlot() >= event.getView().getTopInventory().getSize()) return;
+        if (!(event.getWhoClicked() instanceof Player player) || event.getRawSlot() < 0 || event.getRawSlot() >= top.getSize()) return;
         ItemStack item = event.getCurrentItem();
         if (item == null || !item.hasItemMeta()) return;
         String action = item.getItemMeta().getPersistentDataContainer().get(actionKey, PersistentDataType.STRING);
         if (action == null) return;
+        if (holder instanceof ShopHolder shop) {
+            if (plugin.combatStatsManager() != null && plugin.combatStatsManager().isInCombat(player)
+                    && !player.isOp() && !player.hasPermission("servertoolkit.admin") && !player.hasPermission("servertoolkit.combat.bypass")) {
+                player.closeInventory(); player.sendMessage(color("&cShop-Aktionen sind während eines Kampfes gesperrt.")); return;
+            }
+            if (action.equals("shop_prev")) openShop(player, Math.max(0, shop.page - 1), shop.sort, shop.query);
+            else if (action.equals("shop_next")) openShop(player, shop.page + 1, shop.sort, shop.query);
+            else if (action.equals("shop_sort")) openShop(player, 0, "name".equals(shop.sort) ? "price_low" : "price_low".equals(shop.sort) ? "price_high" : "name", shop.query);
+            else if (action.equals("shop_search")) {
+                pendingShopSearch.add(player.getUniqueId()); player.closeInventory();
+                player.sendMessage(color("&eSchreibe den Suchbegriff in den Chat. &7'abbrechen' löscht die Suche."));
+            } else if (action.startsWith("buy:")) buy(player, action.substring(4));
+            return;
+        }
         if (action.equals("close")) { player.closeInventory(); return; }
         if (action.startsWith("buy:")) buy(player, action.substring(4));
         if (action.startsWith("rtp:")) randomTeleport(player, action.substring(4));
@@ -428,7 +472,7 @@ public final class PlayerFeaturesManager implements CommandExecutor, Listener {
     private String title(String text) { return color(text); }
     private String color(String text) { return ChatColor.translateAlternateColorCodes('&', text); }
 
-    private static final class ShopHolder implements InventoryHolder { private Inventory inventory; @Override public Inventory getInventory() { return inventory; } }
+    private static final class ShopHolder implements InventoryHolder { private Inventory inventory; private int page; private String sort = "name"; private String query = ""; @Override public Inventory getInventory() { return inventory; } }
     private static final class RtpHolder implements InventoryHolder { private Inventory inventory; @Override public Inventory getInventory() { return inventory; } }
     private static final class SellHolder implements InventoryHolder { private Inventory inventory; @Override public Inventory getInventory() { return inventory; } }
 }
