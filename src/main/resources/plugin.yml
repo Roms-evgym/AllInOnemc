@@ -72,6 +72,9 @@ commands:
   tpa:
     description: Sendet einem Spieler eine Teleportanfrage.
     usage: /tpa <Spieler>
+  tpahere:
+    description: Sendet einem Spieler eine Anfrage, sich zu dir zu teleportieren.
+    usage: /tpahere <Spieler>
   tpaccept:
     description: Nimmt eine offene Teleportanfrage an.
     usage: /tpaccept
@@ -269,6 +272,9 @@ permissions:
     default: true
   servertoolkit.command.tpa:
     description: Darf den Befehl /tpa verwenden.
+    default: true
+  servertoolkit.command.tpahere:
+    description: Darf den Befehl /tpahere verwenden.
     default: true
   servertoolkit.command.tpaccept:
     description: Darf den Befehl /tpaccept verwenden.
