@@ -250,13 +250,18 @@ final class ContentToolsManager implements Listener {
     }
 
     private void refreshDisguisedProfileForViewers(Player target) {
-        // setPlayerProfile changes the server-side profile, but existing client entities
-        // can keep the old GameProfile until they are respawned. Hide/show forces a fresh
-        // player-info/entity spawn for every viewer (the target never hides itself).
+        // Let the destroy-player packet reach clients before sending the replacement
+        // player-info/entity spawn. Sending hide and show in the same tick can be
+        // processed as one refresh and leave the old account name visible.
         for (Player viewer : Bukkit.getOnlinePlayers()) {
             if (viewer.equals(target)) continue;
             viewer.hidePlayer(plugin, target);
-            viewer.showPlayer(plugin, target);
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (viewer.isOnline() && target.isOnline()) {
+                    viewer.showPlayer(plugin, target);
+                    Bukkit.getScheduler().runTask(plugin, () -> plugin.utilityManager().refreshAllNameplates());
+                }
+            }, 2L);
         }
     }
 
