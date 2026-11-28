@@ -649,9 +649,8 @@ public final class UtilityManager implements CommandExecutor, Listener {
         String nick = plugin.contentToolsManager() == null ? null : plugin.contentToolsManager().nickName(player);
         String clan = plugin.clanManager() == null ? null : plugin.clanManager().clanName(player.getUniqueId());
         String clanTag = clan == null || clan.isBlank() ? "" : color(" &8[&e" + clan + "&8]");
-        String nickRankId = nick == null || plugin.contentToolsManager() == null ? null : plugin.contentToolsManager().nickRankId(player);
         String shownName = nick == null ? prefix + player.getName() + clanTag
-                : rankPrefix(nickRankId == null ? "member" : nickRankId) + nick + clanTag;
+                : rankPrefix("member") + nick + clanTag;
         player.setPlayerListName(shownName);
         player.setDisplayName(shownName);
         // The entity's vanilla overhead label is tied to its original account name.
@@ -675,8 +674,8 @@ public final class UtilityManager implements CommandExecutor, Listener {
         for (Player target : Bukkit.getOnlinePlayers()) {
             boolean targetNicked = plugin.contentToolsManager() != null
                     && plugin.contentToolsManager().nickName(target) != null;
-            String displayRank = targetNicked && plugin.contentToolsManager().nickRankId(target) != null
-                    ? plugin.contentToolsManager().nickRankId(target) : getRankId(target);
+            // A nick always uses the default Spieler rank, regardless of the player's real rank.
+            String displayRank = targetNicked ? "member" : getRankId(target);
             String nickName = targetNicked ? plugin.contentToolsManager().nickName(target) : null;
             String shownPlayerName = target.getName();
             String headPrefix = rankPrefix(displayRank) + " ";
