@@ -655,7 +655,7 @@ public final class UtilityManager implements CommandExecutor, Listener {
         player.setDisplayName(shownName);
         // The entity's vanilla overhead label is tied to its original account name.
         // Hide that label while nicked and render the visible nick as the custom name.
-        player.setCustomName(nick == null ? null : shownName);
+        player.setCustomName(nick);
         player.setCustomNameVisible(nick != null);
         PermissionAttachment previous = rankAttachments.remove(player.getUniqueId());
         if (previous != null) previous.remove();
@@ -691,9 +691,9 @@ public final class UtilityManager implements CommandExecutor, Listener {
             // The real server-side entry is required to suppress the immutable account label.
             // The nick itself is rendered through Player#setCustomName while nicked.
             team.addEntry(shownPlayerName);
+            // Keep nameplates visible for everyone, including players using /nick.
             team.setOption(org.bukkit.scoreboard.Team.Option.NAME_TAG_VISIBILITY,
-                    targetNicked ? org.bukkit.scoreboard.Team.OptionStatus.NEVER
-                            : org.bukkit.scoreboard.Team.OptionStatus.ALWAYS);
+                    org.bukkit.scoreboard.Team.OptionStatus.ALWAYS);
         }
         boolean nicked = plugin.contentToolsManager() != null
                 && plugin.contentToolsManager().nickName(player) != null;
