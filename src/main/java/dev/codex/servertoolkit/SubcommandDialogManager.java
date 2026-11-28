@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentHashMap;
 final class SubcommandDialogManager implements Listener {
     private final ServerToolkit plugin;
     private final Map<UUID,String> pending = new ConcurrentHashMap<>();
+    private final java.util.Set<UUID> bypassRootDialogOnce = ConcurrentHashMap.newKeySet();
 
     SubcommandDialogManager(ServerToolkit plugin) {
         this.plugin = plugin;
@@ -24,6 +25,7 @@ final class SubcommandDialogManager implements Listener {
     }
 
     boolean openIfRoot(Player p,String root) {
+        if (bypassRootDialogOnce.remove(p.getUniqueId())) return false;
         String key=root.toLowerCase();
         if (!List.of("clan","kit","ah","order","orders","mace","rank","ranks","voice","vanish",
                 "banpreset","banhammer","nick","unnick","prank","lag","crash","clanduel").contains(key)) return false;
@@ -52,7 +54,10 @@ final class SubcommandDialogManager implements Listener {
         plugin.popupMenuManager().showMenu(p,title,desc,List.of(options));
     }
     private PopupMenuManager.MenuOption run(Player p,String label,String desc,String command) {
-        return new PopupMenuManager.MenuOption(label,desc,()->p.performCommand(command));
+        return new PopupMenuManager.MenuOption(label,desc,()->{
+            bypassRootDialogOnce.add(p.getUniqueId());
+            p.performCommand(command);
+        });
     }
     private PopupMenuManager.MenuOption ask(Player p,String label,String desc,String command,String hint) {
         return new PopupMenuManager.MenuOption(label,desc,()->prompt(p,command,hint));
